@@ -9,6 +9,7 @@
 /* ============ 设计令牌 · 暮色夜谈 ============ */
 :root{
   --bg:#0e1216; --bg-deep:#0a0d10;
+  --scene-1:#0e1216; --scene-2:#141b23; --scene-3:#0a0d10; --scene-glow:#e6b566;
   --surface:#151b21; --surface-2:#1b232b; --surface-3:#232d37;
   --border:#28323d; --border-subtle:#1f2831;
   --text:#e9e7e2; --text-2:#a3adb8; --text-3:#5f6b77;
@@ -95,7 +96,7 @@ textarea{resize:none}
 .icon-btn-mini:hover{color:var(--accent);border-color:var(--accent-line)}
 
 /* ---- 主区 ---- */
-#main{flex:1;display:flex;flex-direction:column;min-width:0;position:relative;background:linear-gradient(180deg,var(--bg) 0%,var(--bg-deep) 100%)}
+#main{flex:1;display:flex;flex-direction:column;min-width:0;position:relative;background:linear-gradient(180deg,var(--scene-1,var(--bg)) 0%,var(--scene-3,var(--bg-deep)) 100%);transition:background 2.5s ease}
 #chatHeader{
   display:flex;align-items:center;gap:12px;padding:12px 18px;
   border-bottom:1px solid var(--border-subtle);background:color-mix(in srgb,var(--surface) 55%,transparent);
@@ -276,6 +277,24 @@ details.tech .tech-body code{background:var(--bg-deep);padding:1px 5px;border-ra
 .menu-btn{display:none;width:34px;height:34px;border-radius:var(--r-sm);color:var(--text-2);align-items:center;justify-content:center}
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
 /* ====== 补充：错误框 / 打字光标 / 编辑面板 / 欢迎页快捷 ====== */
+/* ====== V3 动态场景系统 ====== */
+#sceneGlow{position:absolute;inset:0;pointer-events:none;z-index:0;transition:opacity 2.5s ease;
+  background:
+    radial-gradient(55% 42% at 18% 8%, color-mix(in srgb, var(--scene-glow) 16%, transparent), transparent 72%),
+    radial-gradient(48% 38% at 84% 90%, color-mix(in srgb, var(--scene-glow) 11%, transparent), transparent 70%);
+}
+html[data-theme="light"] #sceneGlow{opacity:.45}
+#chatBody{position:relative;z-index:1}
+#sceneBar{display:none;position:relative;z-index:2;margin:12px auto -6px;width:max-content;max-width:90%;align-items:center;gap:9px;padding:7px 16px;border-radius:var(--r-full);background:color-mix(in srgb,var(--bg-deep) 55%,transparent);border:1px solid var(--border);backdrop-filter:blur(10px);font-size:12.5px;color:var(--text-2);letter-spacing:1.5px;opacity:0;transform:translateY(-4px);transition:opacity 1.2s ease,transform 1.2s ease}
+#sceneBar.show{display:flex;opacity:1;transform:none}
+#sceneBar .scene-icon{font-size:15px;line-height:1}
+#sceneBar .scene-text{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#sceneBar .scene-dot{width:5px;height:5px;border-radius:50%;background:var(--scene-glow);box-shadow:0 0 8px var(--scene-glow);animation:scenePulse 3s ease-in-out infinite}
+@keyframes scenePulse{0%,100%{opacity:.4}50%{opacity:1}}
+.depth-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.depth-grid .preset-btn{padding:9px 6px;text-align:center}
+.depth-desc{font-size:11.5px;color:var(--text-3);margin-top:6px;line-height:1.5;min-height:17px}
+
 .err-box{background:var(--danger-soft);border:1px solid var(--danger);border-radius:var(--r-md);padding:10px 14px;font-size:13.5px;color:var(--danger);line-height:1.7}
 .err-box .err-tip{color:var(--text-3);font-size:12.5px}
 .cursor{display:inline-block;width:2px;height:1em;background:var(--accent);vertical-align:-2px;margin-left:2px;animation:blink 1s steps(1) infinite}
@@ -346,6 +365,7 @@ details.tech .tech-body code{background:var(--bg-deep);padding:1px 5px;border-ra
 
   <!-- ================= 主区 ================= -->
   <main id="main">
+    <div id="sceneGlow"></div>
     <header id="chatHeader" style="display:none">
       <button class="menu-btn" id="menuBtn">☰</button>
       <div class="avatar" id="hAvatar">🎭</div>
@@ -361,6 +381,7 @@ details.tech .tech-body code{background:var(--bg-deep);padding:1px 5px;border-ra
         <button id="clearBtn" title="清空消息">🧹</button>
       </div>
     </header>
+    <div id="sceneBar"><span class="scene-icon">🏮</span><span class="scene-text">馆内灯暖 · 夜色正浓</span><span class="scene-dot"></span></div>
     <div id="chatBody"></div>
     <button class="scroll-down" id="scrollDown" title="回到底部">↓</button>
     <footer id="inputBar" style="display:none">
@@ -444,6 +465,11 @@ details.tech .tech-body code{background:var(--bg-deep);padding:1px 5px;border-ra
       <label>模型</label>
       <input type="text" id="apiModel" list="modelList" placeholder="gpt-4o / deepseek-chat / glm-4.6 …" spellcheck="false">
       <datalist id="modelList"></datalist>
+    </div>
+    <div class="field">
+      <label>回复详细度 <span class="opt">沉浸模式消耗更多 token</span></label>
+      <div class="depth-grid" id="depthGrid"></div>
+      <p class="depth-desc" id="depthDesc"></p>
     </div>
     <div class="field">
       <label>扮演温度 <span class="opt" id="tempVal">0.90</span></label>
@@ -795,7 +821,7 @@ const BUILTIN_CHARS = [
 let state = {
   chars: [],            // 全部角色（内置+自定义）
   sessions: [],         // 全部会话
-  api: { preset:"deepseek", base:"", key:"", model:"", temp:0.9, max:1024, rulesOn:true },
+  api: { preset:"deepseek", base:"", key:"", model:"", temp:0.9, max:1024, rulesOn:true, depth:"deep" },
   activeCharId: null,
   activeSessionId: null,
   generating: false,
@@ -954,7 +980,8 @@ function renderChat(){
   $("#inputBar").style.display = sess ? "block" : "none";
   $("#scrollDown").classList.remove("show");
   if(!sess){
-    // 欢迎页：注入快捷角色入口
+    // 欢迎页：回馆内默认画面 + 注入快捷角色入口
+    applyScene("", true);
     const wq = $("#wQuick");
     wq.innerHTML = `<span style="width:100%;text-align:center;color:var(--text-3);font-size:12px;margin-bottom:2px">— 或直接挑一位今晚的聊伴 —</span>`;
     for(const ch of state.chars.filter(c => c.builtin).slice(0, 6)){
@@ -972,7 +999,9 @@ function renderChat(){
   $("#hName").textContent = ch.name;
   $("#hName").style.color = ch.color;
   $("#hStatusText").textContent = state.generating ? "正在回应……" : `在线 · ${ch.tagline}`;
-  $("#charHint").textContent = `${ch.name} · 温度 ${state.api.temp} · 守则${state.api.rulesOn ? "开" : "关"}`;
+  $("#charHint").textContent = `${ch.name} · ${DEPTH_PRESETS[state.api.depth]?.label ?? "沉浸"} · 温度 ${state.api.temp} · 守则${state.api.rulesOn ? "开" : "关"}`;
+  // 恢复这场对话的画面
+  applyScene(sess.scene || "", true);
   const wrap = document.createElement("div");
   wrap.className = "chat-wrap";
   if(hasSess){
@@ -1072,12 +1101,82 @@ function renderAll(){
   updateApiStatus();
 }
 /* ================================================================
+ * 动态场景系统 V3
+ * 模型每轮在回复末尾输出 [场景]关键词·关键词…[/场景]；
+ * 前端剥离正文、把关键词映射成色板，驱动主区背景渐变与场景卡，
+ * 让画面随剧情自然流动。
+ * ================================================================ */
+const SCENE_RULE = `【场景同步】每条回复的最末尾，另起一行输出当前画面，格式严格为：
+[场景]时间或天气·地点·光线氛围·环境细节[/场景]
+要求：关键词 4~6 个、用 · 分隔（如：深夜·天台·微风·远处城市灯光·暖黄）；只写环境，不写人物对话与心理；场景必须随剧情演变——地点换了、时间过了、氛围变了就要更新，与对话内容保持一致；对话回到同一地点时场景也应回到对应样子。`;
+
+const DEPTH_PRESETS = {
+  concise: { label: "简洁", desc: "1~3 句，像微信聊天一样短促有力，节奏最快。", prompt: "回复控制在 1~3 句以内，像即时消息一样短促、有呼吸感，禁止长篇。" },
+  normal: { label: "标准", desc: "2~5 句，日常聊天的自然节奏，偶有展开。", prompt: "默认回复 2~5 句，保持日常聊天的自然节奏；情节需要时可以适当展开。" },
+  deep: { label: "沉浸", desc: "4~8 句起，铺开环境、动作与心理，重点情节可写长段落。", prompt: "默认回复 4~8 句。多用环境描写、动作细节、语气停顿和内心活动把画面铺开；遇到重要情绪节点可以写一段有呼吸感的长回复，但始终保持口语自然，不堆砌辞藻、不变成小说旁白。" }
+};
+
+/* 关键词 → 色板（dark / light 各一套，glow 为光斑与场景点颜色） */
+const SCENE_PALETTES = [
+  { k: ["夜", "晚", "深夜", "凌晨", "月", "星", "星空"], name: "夜", icon: "🌙", dark: ["#0b1020", "#131b33", "#090d1a"], light: ["#e8ecf7", "#dfe4f2", "#f2f0ea"], glowD: "#5a6ec0", glowL: "#7c8ecf" },
+  { k: ["晨", "清晨", "朝阳", "日出"], name: "晨", icon: "🌅", dark: ["#191410", "#2b2318", "#100d0a"], light: ["#f7efe2", "#f2e6d2", "#faf6ee"], glowD: "#d9a45e", glowL: "#d9a45e" },
+  { k: ["雨", "雷", "暴雨", "阴", "潮湿", "梅雨"], name: "雨", icon: "🌧", dark: ["#0c1418", "#152229", "#090f13"], light: ["#e2eaee", "#d5e2e8", "#eef2f4"], glowD: "#4a7d8c", glowL: "#6a9dac" },
+  { k: ["雪", "冬", "霜", "冰"], name: "雪", icon: "❄️", dark: ["#101419", "#1b232d", "#0c0f13"], light: ["#eef2f6", "#e3eaf1", "#f6f8fa"], glowD: "#8fb3cc", glowL: "#9db8cc" },
+  { k: ["火", "篝火", "烛", "炉", "壁炉", "灯火"], name: "火光", icon: "🔥", dark: ["#170f08", "#2b1c0d", "#0f0a06"], light: ["#f7ead9", "#f0dfc4", "#faf2e6"], glowD: "#d98e3a", glowL: "#d98e3a" },
+  { k: ["海", "海边", "浪", "码头", "港", "沙滩"], name: "海", icon: "🌊", dark: ["#091216", "#112430", "#080f13"], light: ["#e0edf2", "#d2e4ec", "#ecf4f7"], glowD: "#3a8ca6", glowL: "#62a8bd" },
+  { k: ["林", "森林", "树", "草原", "花", "公园", "山", "竹"], name: "绿意", icon: "🌿", dark: ["#0c1410", "#152219", "#090e0b"], light: ["#e4efe6", "#d6e8da", "#eef5f0"], glowD: "#5a9c6e", glowL: "#6aae7e" },
+  { k: ["咖啡", "店", "馆", "屋", "室内", "厨房", "客厅", "宿舍"], name: "暖屋", icon: "☕", dark: ["#161009", "#241a10", "#0e0a06"], light: ["#f6ecdf", "#efe0cc", "#faf3e9"], glowD: "#c98f5a", glowL: "#c98f5a" },
+  { k: ["黄昏", "傍晚", "夕阳", "暮", "落日"], name: "暮色", icon: "🌇", dark: ["#150f0d", "#281a14", "#0e0a09"], light: ["#f5e8e0", "#eed8cc", "#f8efe9"], glowD: "#c96e4a", glowL: "#c96e4a" }
+];
+const SCENE_DEFAULT = { name: "馆", icon: "🏮", dark: ["#0e1216", "#141b23", "#0a0d10"], light: ["#f4f1ea", "#ece7dd", "#f4f1ea"], glowD: "#e6b566", glowL: "#c9a45e" };
+
+/** 从文本中剥离 [场景] 块 */
+function splitScene(raw){
+  if (!raw) return { clean: raw || "", scene: null };
+  const m = raw.match(/\[场景\]([\s\S]*?)(?:\[\/场景\]|$)/);
+  if (!m) return { clean: raw, scene: null };
+  return { clean: raw.replace(/\[场景\][\s\S]*?(?:\[\/场景\]|$)/, "").trimEnd(), scene: m[1].trim() };
+}
+function matchPalette(str){
+  if (str) for (const p of SCENE_PALETTES) if (p.k.some(k => str.includes(k))) return p;
+  return SCENE_DEFAULT;
+}
+let _lastSceneRaw = null;
+/** 应用场景：更新背景色板与场景卡（关键词变化才触发 DOM/CSS 过渡） */
+function applyScene(str, force){
+  const key = str || "";
+  if (!force && key === _lastSceneRaw) return;
+  _lastSceneRaw = key;
+  const p = matchPalette(key);
+  const dark = document.documentElement.dataset.theme !== "light";
+  const bg = dark ? p.dark : p.light;
+  const glow = dark ? p.glowD : p.glowL;
+  const root = document.documentElement.style;
+  root.setProperty("--scene-1", bg[0]);
+  root.setProperty("--scene-2", bg[1]);
+  root.setProperty("--scene-3", bg[2]);
+  root.setProperty("--scene-glow", glow);
+  const parts = key.split(/[·,，、;；/|]+/).map(s => s.trim()).filter(Boolean).slice(0, 6);
+  const bar = $("#sceneBar");
+  if (parts.length){
+    bar.innerHTML = `<span class="scene-icon">${p.icon}</span><span class="scene-text">${escapeHtml(parts.join(" · "))}</span><span class="scene-dot"></span>`;
+    bar.classList.add("show");
+  } else {
+    bar.innerHTML = `<span class="scene-icon">${p.icon}</span><span class="scene-text">馆内灯暖 · 夜色正浓</span><span class="scene-dot"></span>`;
+    bar.classList.remove("show");
+  }
+}
+
+/* ================================================================
  * 系统提示词组装
  * ================================================================ */
 function buildSystemPrompt(sess){
   const ch = getChar(sess.charId);
+  const depth = DEPTH_PRESETS[state.api.depth] || DEPTH_PRESETS.deep;
   const parts = [];
   if(state.api.rulesOn) parts.push(RP_RULES);
+  parts.push(SCENE_RULE);
+  parts.push(`【回复详细度】${depth.prompt}`);
   parts.push(`【你的角色设定】\n${ch.persona}`);
   if(sess.memo && sess.memo.trim()){
     parts.push(`【当前剧情备忘（用户与你的约定，请遵守）】\n${sess.memo.trim()}`);
@@ -1202,24 +1301,34 @@ async function generate(sess, mode){
   bubble.classList.add("streaming");
   bubble.innerHTML = `<span class="cursor"></span>`;
 
+  let sceneStr = sess.scene || null;
+  let lastPaintClean = "";
+  let lastPaintScene = null;
   let lastRender = 0;
   const paint = (full) => {
     const now = performance.now();
     if(now - lastRender < 40) return;
     lastRender = now;
-    bubble.innerHTML = renderRich(full) + `<span class="cursor"></span>`;
+    const { clean, scene } = splitScene(full);
+    lastPaintClean = clean;
+    lastPaintScene = scene;
+    bubble.innerHTML = renderRich(clean) + `<span class="cursor"></span>`;
+    if(scene && scene !== sceneStr){ sceneStr = scene; applyScene(scene); }
     const body = $("#chatBody");
     if(body.scrollHeight - body.scrollTop - body.clientHeight < 160) body.scrollTop = body.scrollHeight;
   };
   try{
     const full = await streamChat(reqMsgs, (_, f) => paint(f));
-    if(!full.trim()) throw new Error("模型返回了空内容");
-    placeholder.content = full.trim();
+    const { clean, scene } = splitScene(full);
+    if(!clean.trim() && !scene) throw new Error("模型返回了空内容");
+    placeholder.content = clean.trim();
+    if(scene){ sceneStr = scene; applyScene(scene); }
     placeholder.ts = nowTs();
   }catch(e){
     if(e.name === "AbortError"){
-      if(placeholder.content){
-        placeholder.content += "……";
+      if(lastPaintClean){
+        placeholder.content = lastPaintClean + "……";
+        if(lastPaintScene){ sceneStr = lastPaintScene; applyScene(lastPaintScene); }
       }else{
         sess.messages.pop();
       }
@@ -1235,7 +1344,8 @@ async function generate(sess, mode){
     }
   }
   bubble.classList.remove("streaming");
-  // 会话元数据
+  // 会话元数据（场景写入会话，刷新/切换后画面可复现）
+  if(sceneStr) sess.scene = sceneStr;
   sess.updatedAt = nowTs();
   if(sess.title === "新对话"){
     const firstUser = sess.messages.find(m => m.role === "user" && !m.err);
@@ -1345,6 +1455,29 @@ function renderPresetGrid(){
     b.addEventListener("click", () => { state.api.preset = k; syncPresetUI(); renderPresetGrid(); });
     grid.appendChild(b);
   }
+  // 回复详细度三档
+  const dg = $("#depthGrid");
+  if(dg){
+    dg.innerHTML = "";
+    for(const [k, v] of Object.entries(DEPTH_PRESETS)){
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "preset-btn" + (state.api.depth === k ? " on" : "");
+      b.textContent = v.label;
+      b.addEventListener("click", () => {
+        state.api.depth = k;
+        renderDepthGrid();
+      });
+      dg.appendChild(b);
+    }
+    renderDepthGrid();
+  }
+}
+function renderDepthGrid(){
+  const dg = $("#depthGrid");
+  if(!dg) return;
+  [...dg.children].forEach((b, i) => b.classList.toggle("on", Object.keys(DEPTH_PRESETS)[i] === state.api.depth));
+  $("#depthDesc").textContent = (DEPTH_PRESETS[state.api.depth] || DEPTH_PRESETS.deep).desc;
 }
 function syncPresetUI(){
   const p = state.api.preset;
@@ -1605,6 +1738,8 @@ function toggleTheme(){
   document.documentElement.dataset.theme = next;
   store.set("theme", next);
   $("#themeBtn").textContent = next === "dark" ? "🌙" : "☀️";
+  // 场景色板有明暗两套，切主题后按当前场景重应用
+  applyScene(_lastSceneRaw, true);
 }
 function openDrawer(){
   $("#sidebar").classList.add("open");
