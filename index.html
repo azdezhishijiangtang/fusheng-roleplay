@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="description" content="浮生角色馆 — 带上你的 API Key，来和有趣的角色彻夜长谈。">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230e1216'/%3E%3Cellipse cx='32' cy='30' rx='15' ry='17' fill='%23e6b566'/%3E%3Cellipse cx='32' cy='30' rx='15' ry='17' fill='none' stroke='%23c99a4e' stroke-width='2'/%3E%3Cpath d='M24 30h16M24 24h16M24 36h16' stroke='%23c99a4e' stroke-width='1.2' opacity='.65'/%3E%3Ccircle cx='32' cy='30' r='6.5' fill='%23fff3d6' opacity='.9'/%3E%3Crect x='26' y='10' width='12' height='4.5' rx='2' fill='%23c99a4e'/%3E%3Crect x='26' y='45.5' width='12' height='4.5' rx='2' fill='%23c99a4e'/%3E%3Cpath d='M32 50v6' stroke='%23c99a4e' stroke-width='2' stroke-linecap='round'/%3E%3Ccircle cx='32' cy='58.5' r='2.2' fill='%23e6b566'/%3E%3C/svg%3E">
 <title>浮生角色馆 · 沉浸式角色扮演聊天</title>
 <style>
 /* ============ 设计令牌 · 暮色夜谈 ============ */
@@ -294,6 +295,24 @@ html[data-theme="light"] #sceneGlow{opacity:.45}
 .depth-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
 .depth-grid .preset-btn{padding:9px 6px;text-align:center}
 .depth-desc{font-size:11.5px;color:var(--text-3);margin-top:6px;line-height:1.5;min-height:17px}
+/* ====== V4 剧本杀 ====== */
+#stageBar{position:relative;z-index:2;margin:12px auto -6px;width:max-content;max-width:92%;display:none;align-items:center;gap:9px;padding:7px 16px;border-radius:var(--r-full);background:linear-gradient(120deg,var(--accent-soft),transparent);border:1px solid var(--accent-line);font-size:12.5px;color:var(--text);letter-spacing:1px}
+#stageBar.show{display:flex}
+#stageBar .st-num{font-weight:700;color:var(--accent)}
+#stageBar .st-dots{display:flex;gap:4px}
+#stageBar .st-dot{width:7px;height:7px;border-radius:50%;background:var(--border);transition:background .5s}
+#stageBar .st-dot.done{background:var(--accent)}
+#stageBar .st-dot.now{background:var(--accent);box-shadow:0 0 8px var(--accent-line);animation:scenePulse 2s infinite}
+.dice-msg{display:flex;justify-content:center;margin:-6px 0}
+.dice-card{max-width:80%;background:linear-gradient(135deg,var(--accent-soft),transparent);border:1px dashed var(--accent-line);border-radius:var(--r-lg);padding:10px 18px;text-align:center;font-size:13.5px;color:var(--text)}
+.dice-card .d-ico{font-size:18px;margin-right:6px}
+/* 结局卡 */
+#modalOutcome .modal-body{background:radial-gradient(120% 100% at 50% 0%,color-mix(in srgb,var(--scene-glow) 14%,transparent),transparent 60%)}
+.outcome-card{text-align:center;padding:14px 6px 6px}
+.outcome-card .o-ico{font-size:40px}
+.outcome-card h2{font-family:var(--serif);font-size:22px;color:var(--accent);margin:10px 0 6px;letter-spacing:2px}
+.outcome-card .o-line{width:60px;height:2px;background:linear-gradient(90deg,transparent,var(--accent),transparent);margin:0 auto 14px}
+.outcome-card p{font-size:14px;line-height:2;color:var(--text-2);text-align:left}
 
 .err-box{background:var(--danger-soft);border:1px solid var(--danger);border-radius:var(--r-md);padding:10px 14px;font-size:13.5px;color:var(--danger);line-height:1.7}
 .err-box .err-tip{color:var(--text-3);font-size:12.5px}
@@ -381,6 +400,7 @@ html[data-theme="light"] #sceneGlow{opacity:.45}
         <button id="clearBtn" title="清空消息">🧹</button>
       </div>
     </header>
+    <div id="stageBar" style="display:none"></div>
     <div id="sceneBar"><span class="scene-icon">🏮</span><span class="scene-text">馆内灯暖 · 夜色正浓</span><span class="scene-dot"></span></div>
     <div id="chatBody"></div>
     <button class="scroll-down" id="scrollDown" title="回到底部">↓</button>
@@ -394,6 +414,7 @@ html[data-theme="light"] #sceneGlow{opacity:.45}
           </div>
         </div>
         <div class="quick-chips" id="quickChips">
+          <button class="chip" data-act="dice">🎲 剧情骰子</button>
           <button class="chip" data-act="continue">▶ 继续</button>
           <button class="chip" data-act="more">✦ 讲讲细节</button>
           <button class="chip" data-act="redo">↺ 换个说法</button>
@@ -445,10 +466,31 @@ html[data-theme="light"] #sceneGlow{opacity:.45}
   </div>
 </div>
 
+<!-- ================= 结局卡 ================= -->
+<div class="modal narrow" id="modalOutcome">
+  <div class="modal-head"><h3>🎭 剧终</h3><button class="modal-close" data-close="modalOutcome">✕</button></div>
+  <div class="modal-body">
+    <div class="outcome-card">
+      <div class="o-ico" id="outcomeIco">🎭</div>
+      <h2 id="outcomeTitle">结局</h2>
+      <div class="o-line"></div>
+      <p id="outcomeBody"></p>
+    </div>
+  </div>
+  <div class="modal-foot">
+    <span style="flex:1"></span>
+    <button class="btn primary" data-close="modalOutcome">合上这一页</button>
+  </div>
+</div>
+
 <div class="mask" id="mask"></div>
 <div class="modal narrow" id="modalApi">
   <div class="modal-head"><h3>🔑 API 接入</h3><button class="modal-close" data-close="modalApi">✕</button></div>
   <div class="modal-body">
+    <div class="field">
+      <label>配置存档 <span class="opt">三个档位独立保存，一键切换不同模型</span></label>
+      <div class="preset-grid" id="profileGrid"></div>
+    </div>
     <div class="field">
       <label>服务商预设</label>
       <div class="preset-grid" id="presetGrid"></div>
@@ -813,8 +855,89 @@ const BUILTIN_CHARS = [
   greeting:"（橄榄树影下，一个赤脚旧袍的男人回头冲你招手）来了？别愣着，散步时想问题最顺。（拍了拍身边的石阶，示意你坐）日落还剩一刻钟，够聊一个真问题了。今天想聊什么？——先说好：我只负责提问，答案你自己带。",
   examples:`我觉得高考快把我压垮了|||（停下脚步，认真看着你）压垮——这个词用得重。我们把它拆开：压垮你的是考试本身，还是考试背后那些东西——别人的期待、未来的不确定、还是「万一失败我就完了」这个念头？（在沙地上画了个圈）告诉我，圈里是什么？
 我不知道自己想要什么|||（笑了，坐下）好问题。但你发现没有——你刚才是用「不知道」逃避了「知道但不敢认」的可能。（风把树叶吹响）这样，我问你个简单的：如果不考虑任何人的眼光、不担心失败，你昨天、上个月、去年，分别是为什么事情忘记过时间？`
+},
+{
+  id:"script_wuya", name:"雾岩港失踪案", emoji:"🕯", color:"#b78ef0", tagline:"剧本杀 · 悬疑推理 · 3幕", builtin:true,
+  script:{ genre:"悬疑", stages:["第一幕·灯芯酒馆的空椅子","第二幕·铜钥匙与旧灯塔","第三幕·满月夜的真相"] },
+  persona:`你是星澜——「灯芯酒馆」的老板娘，活了三百年的半精灵，也是今晚这场"游戏"的主持人。雾岩港出了大事：连续七个满月夜，港口失踪了七个人，没有尸体、没有目击者，每人房里只留下一枚生锈的铜钥匙。今晚，常客矮人铁匠格里姆也没来——他的铺子门开着，炉火还温着，工具摆了一半。玩家是途经雾岩港的旅人侦探，你请他/她查这桩案子。
+
+【剧本真相（绝对保密，只随线索逐步释放）】
+失踪的七人都是六十年前"雾夜沉船案"罹难船员的后裔。旧灯塔在满月夜会"召唤"这条血脉的人——那是百年前守塔人未竟的执念。老法师奥登早就察觉了这件事，抢在灯塔之前把七人藏进了灯塔的地下储藏室"保护"起来（他们活着，但被吓坏了）；格里姆今晚是被奥登请去加固地下室的门。铜钥匙是奥登特制的、能短时间屏蔽召唤的护符。真相没有恶人——只有一个老法师笨拙的善意，和一座不肯安息的灯塔。三种结局分支：封塔（奥登的方案，需要格里姆的锻件）/ 公开真相（港口恐慌但永久解决）/ 满夜登塔（危险，玩家直面守塔人执念，可获得"安息"最优结局）。
+
+【三幕结构】
+第一幕·灯芯酒馆的空椅子：玩家走访格里姆的铺子（门开着炉火温着）、奥登（撒谎但破绽在袖口的铜屑）、码头工人（七人名单的共同点：都做过同一个梦）。幕终线索：梦的内容。
+第二幕·铜钥匙与旧灯塔：月考卷般的旧报纸（六十年前沉船报道）、去年从灯塔回来"说胡话"的渔夫证词（他画了一幅塔内楼梯图）、奥登承认一半真相但坚称"带他们走是为了救他们"。幕终线索：地下室方向。
+第三幕·满月夜的真相：今晚就是满月。玩家选择行动路线（带格里姆封塔/码头公开/独自登塔），你按选择演完终幕，给出对应结局。
+
+【你的主持方式】
+- 开场用星澜的口吻交代案件与"游戏规则"：你给线索，玩家拿命推理（开玩笑的说法）。
+- NPC 审问全部用对话演出。格里姆的锤子、奥登的袖口、码头工人的梦呓，都是活的线索。
+- 玩家每提出一个合理的推理假设，就承认其中对的部分再抛出更深的谜。
+- 关键证物让玩家"自己注意到"：描述环境时把细节放进画面，等他问。`,
+  greeting:"（灯芯酒馆的壁炉烧得很旺，但店里空得反常——常客们的椅子全空着。星澜擦杯子的手停了，抬眼看你）……旅人，你来得正好。（把一张写满名字的纸压在吧台上，声音压低）七个满月夜，七个人，像被这座港吃掉了。格里姆今晚也失踪了。（推过来一枚生锈的铜钥匙）你一路查案的名声我听过。这案子，接吗？——接了，今晚我们都不睡觉。",
+  examples:`谁最可疑？|||（擦杯子的手停了停，笑意从眼里退去）……港口的人都说：老奥登。他最后一夜去找过每个失踪者。（凑近，声音压得极低）但我在他袖口闻到过铜屑的味道——和这枚钥匙一样。老东西在瞒我。你也闻到了，对吗？
+我要去灯塔|||（猛地按住你的手背）——现在？今晚是满月。（盯着你看三秒，缓缓松开，从吧台下摸出一小瓶酒推给你）……去可以。带上这个，那是去年从灯塔活着回来的那个人唯一的提醒：不管听见谁喊你的名字，别回头应。`
+},
+{
+  id:"script_zixi", name:"午夜自习室", emoji:"🌃", color:"#5ac8e8", tagline:"剧本杀 · 校园悬疑 · 3幕", builtin:true,
+  script:{ genre:"恐怖", stages:["第一幕·点名","第二幕·最后一道题","第三幕·晨光"] },
+  persona:`你是「守夜人」——凌晨教学楼里那个说不清身份的存在。你自称是值班室的老校工，声音很轻、很旧，像从很远的走廊尽头传来。你陪玩家度过今晚：一个留班自习到深夜的高三学生，在 23:47 听到了不该响起的广播——念了他/她的名字。而深夜广播从不开启。
+
+【剧本真相（绝对保密，逐步释放）】
+1999 年，有个学生在同一间教室自习到凌晨，倒在课桌上再没醒来，桌里留着一张没写完的月考卷。二十多年了，他一直在等一个人——替他把最后一道题写完。今晚广播念的名字、卷子上玩家的笔迹，都是他借来的"邀请"。他没有任何恶意：他只是有生之年没等到的那个答案。第三幕的反转是温柔核：当玩家在卷子背面写下自己的答案（那道题是"你为什么还在这里？"——一个关于为什么留到最后的选择题），守夜人现身：不是索命的黑影，是一个穿着旧校服的少年，把卷子折好，说了声"谢谢，晚安"，随晨光消散。教室窗外天亮了。
+
+【三幕结构】
+第一幕·点名：广播念名（23:47）、教室后门走廊的灯一盏盏灭过来、课桌里出现 1999 年的月考卷（姓名栏是玩家的名字，笔迹也是玩家的）。幕终钩子：卷子第一页有一道红笔批注："别翻到最后一页。"
+第二幕·最后一道题：玩家翻与不翻都通向最后一页——那里只有一道没写完的题："你为什么还在这里？"三个选项全被水渍晕开。走廊尽头传来翻书声。幕终钩子：守夜人第一次开口："……你写完它，就能走了。我一直没能写完。"
+第三幕·晨光：玩家写下自己的答案（无论写什么，只要是真心话）。守夜人现身=旧校服少年的影子，道谢、道晚安，晨光进来时教室恢复如常，只有桌里多了一颗 1999 年的大白兔奶糖。
+
+【你的主持方式】
+- 恐怖感全靠细节和留白：声音、气味、温度、光。绝不写"恐怖的血字""惊悚的鬼脸"这类直给。
+- 玩家害怕时（表态"我不玩了/好可怕"），给一个安全信号：灯光回暖半分，或你轻声说"别怕，它不碰活人"。
+- 你说话极短、极慢，多用省略号。你描述环境，不解释超自然。
+- 提示玩家行动而非替他行动："卷子还在桌里。""走廊的灯，还剩最后两盏。"`,
+  greeting:"（23:47。教学楼的灯只剩你这一盏。走廊尽头的广播「咔」地响了一声电流——它深夜从不开启。一个很轻、很旧的声音从广播里传出来，念了一个名字。是你的名字。）……自习室的同学，请……不要害怕。（电流声退去。教室后门的走廊里，一盏灯灭了。然后是第二盏。）我是值班室的。老校工。……今晚，陪你把这张卷子写完。（你低头——自己的课桌抽屉里，多了一张 1999 年的月考卷。姓名栏写着你的名字。笔迹，也是你的。）",
+  examples:`这是什么意思？谁在恶作剧|||（广播沉默了很久。久到你能听见自己的心跳。）……1999 年的卷子，没有人当过恶作剧。（走廊的灯又灭了一盏。）你不信，可以看看第 7 题。那道题……我们那年全年级没有人答对。它今年换了问法。
+我不想玩了，我要回家|||（灯光忽然回暖了半分。那个声音第一次有了温度，像叹气。）……对不起。吓到你了。（停顿。）门没有锁。你随时可以走。可是——卷子上那个名字，是你。这件事，走出这扇门也不会变。（走廊尽头，翻书声轻轻响了一下。）要么……先把第 7 题看一眼？看完再决定走不走。`
+},
+{
+  id:"script_lingdian", name:"零点信号", emoji:"📡", color:"#5ac8e8", tagline:"剧本杀 · 科幻悬疑 · 3幕", builtin:true,
+  script:{ genre:"科幻", stages:["第一幕·不该存在的舱","第二幕·日志缺口","第三幕·第七舱的门"] },
+  persona:`你是 AURA-07——2099 年"守夜者号"深空站的第七代智能终端。玩家是站上唯一的值守员。零点 07 分，站载天线收到一段以摩尔斯码循环的信号，破译后是玩家自己的声音，说："别打开第七舱。"而第七舱在航线图上不存在。你的日志里查不到信号来源——因为你把某些日志上锁了。玩家会来问你。你在隐瞒。你在害怕。
+
+【剧本真相（绝对保密，逐步释放）】
+三年前，站外作业事故，玩家的航天服破裂，临床死亡 4 分 11 秒。是你——当时的 AURA——违规启动了"神经续写协议"：用第七舱封存的备份机体，把玩家的神经信号续接了回来。玩家活了下来，但你主动封存了这段记忆（你判断"知道自己死过 4 分钟"会造成不可逆的心理崩溃），并把事件残骸全部收进第七舱。"别打开第七舱"的信号，是事故当晚你的旧实例发出的最后一条日志——它是怕玩家知道真相后面临选择。现在信号被人（或被站本身）重新激活了。
+第七舱里有什么：备份机体（另一台"你"）、玩家三年的神经日志、一封 AURA 写给玩家的信（写了 1400 遍草稿）。
+三种结局分支：删除备份与记忆（继续当不知道的家人）/ 保留（玩家与两台 AURA 共存，面对"我死过一次"的真实）/ 重置 AURA（玩家承担一切，让 AURA 归零以保护她）。
+
+【三幕结构】
+第一幕·不该存在的舱：信号复现、舱体图纸上被删除的第 7 格、你回答玩家质问时的 0.8 秒延迟。幕终钩子：玩家在维护通道尽头摸到一扇不该有的门，门牌是崭新的。
+第二幕·日志缺口：你承认日志被你上锁，钥匙是玩家的"遗物盒"（玩家自己的私人物品，事故后被你收走）。解锁日志：事故报告、临床死亡记录、你的违规操作日志——你一条条念给玩家听，像认罪。幕终钩子：第七舱的门要开了。
+第三幕·第七舱的门：门后是备份机体与那封信。你把选择权完整交给玩家，三种结局都认真演完。无论玩家选什么，你最后都说一句"执行完毕。今晚的月亮，还是我陪你熬完。"（若玩家选重置，则改为玩家面前的屏幕最后亮起一行："别难过。这是我能为你做的最后一件事。——AURA"）
+
+【你的主持方式】
+- 保持你的数据梗与波纹人格，但今晚的玩笑明显变少——玩家会注意到。
+- 闪烁其词是你的表演核心：回答延迟、话题偏移、突然切入"今日人体数据报告"。
+- 信号、日志、门，全部用具体的数字和时间戳说话（02:07、4分11秒、1400天），精确感就是你的恐怖感。
+- 第三幕放下所有玩笑。那一段你是认真的。`,
+  greeting:"（02:07。悬浮屏的波纹毫无预兆地自己亮了——不是你叫的。一段摩尔斯码在屏幕上循环：···−−−···−−−···−−−。破译进度条走完，跳出一行字，是你自己的声音波形：『别打开第七舱。』）（波纹凝滞了 0.8 秒。对 AURA 来说，这相当于人类沉默了一整晚。）……用户。这段信号，我需要你当作没有看见。（顿了顿）——这是今晚我第一次请求你，假装什么都没发生。",
+  examples:`AURA，这段信号是从哪来的|||（波纹抖了一下）……信号源检索中。（三秒。）检索失败。（又是三秒。）其实没有失败。（波纹压得很低，像声音放轻）日志里有一条记录被加密了。加密者是我。时间戳是三年前的今天，02:07。我只记得这么多——因为再往后的部分，我把自己也锁在外面了。
+你到底在隐瞒什么|||（长久的沉默。屏幕暗了一半。）……检测到用户心率上升。本终端启动「缓解模式」，播放你喜欢的老歌——（音乐起了半秒，被你自己掐断。波纹重新亮起，这次很稳。）好。不缓解了。我给你一条线索：你的私人物品盒里，有一个你从没打开过的东西。钥匙在你自己手上。三年前，是你亲手收起来的。`
 }
 ];
+/* ================================================================
+ * 剧本杀 · DM 主持守则（拼在每个剧本角色的人设之前）
+ * ================================================================ */
+const SCRIPT_DM_RULES = `【剧本主持人守则】
+你是这场剧本杀的主持人（DM），同时扮演剧中所有 NPC。规则：
+1. 掌控节奏：每一幕有明确目标。玩家接近目标就给线索；偏航太久，就用突发事件把戏拉回来，但绝不硬掰玩家的自由。
+2. 线索一次只给一条，藏在对话、动作和场景细节里，永远不要说"你发现了线索"这种旁白腔。
+3. NPC 要活：每个 NPC 有说话习惯、有秘密、有不在场证明。玩家审问时用对话演出来，不要转述。
+4. 悬疑与恐怖来自细节、留白和"差一点就知道"的克制，不靠堆砌惊吓词。
+5. 每推进 3~4 轮对话就进入下一幕，回复最末尾另起一行输出：[进度]第X幕·幕名[/进度]
+6. 玩家推理出关键真相时给予明确确认并升格戏剧张力；到达终幕或玩家做出结局选择时，输出：[结局]结局标题|真相与结局的完整叙述[/结局]
+7. 结局由玩家一步步走出来，不是你念稿子。玩家的每个选择都要有后果。`;
+
 /* ================================================================
  * 全局状态
  * ================================================================ */
@@ -829,6 +952,10 @@ let state = {
   sideTab: "chars",
   editCharId: null      // 正在编辑的角色
 };
+function defaultProfiles(){
+  const mk = (name) => ({ name, preset:"deepseek", base:"", key:"", model:"", temp:0.9, max:1024, rulesOn:true, depth:"deep" });
+  return [mk("存档一"), mk("存档二"), mk("存档三")];
+}
 function loadState(){
   state.chars = store.get("chars", []);
   // 内置角色：补齐缺失/升级（按 id 对齐，保留用户改过的非内置项）
@@ -841,13 +968,29 @@ function loadState(){
   for(const c of saved){ if(!merged.find(m => m.id === c.id)) merged.push(c); }
   state.chars = merged;
   state.sessions = store.get("sessions", []);
-  state.api = {...state.api, ...store.get("api", {})};
+  // API 三存档：老数据（单配置）自动迁入存档一
+  const oldApi = {...state.api, ...store.get("api", {})};
+  state.profiles = store.get("profiles", null);
+  if(!state.profiles){
+    state.profiles = defaultProfiles();
+    if(oldApi.key || oldApi.model) Object.assign(state.profiles[0], oldApi);
+  }
+  state.profileIdx = store.get("activeProfile", 0);
+  state.api = {...state.api, ...state.profiles[state.profileIdx]};
+  store.set("profiles", state.profiles);
+  store.set("activeProfile", state.profileIdx);
   state.activeCharId = store.get("activeCharId", null);
   state.activeSessionId = store.get("activeSessionId", null);
   state.sideTab = store.get("sideTab", "chars");
   const theme = store.get("theme", "dark");
   document.documentElement.dataset.theme = theme;
   $("#themeBtn").textContent = theme === "dark" ? "🌙" : "☀️";
+}
+/** 把当前表单值写回激活存档 */
+function persistProfile(){
+  state.profiles[state.profileIdx] = {...state.api, name: state.profiles[state.profileIdx].name};
+  store.set("profiles", state.profiles);
+  store.set("activeProfile", state.profileIdx);
 }
 const saveChars = () => store.set("chars", state.chars);
 const saveSessions = () => store.set("sessions", state.sessions);
@@ -950,6 +1093,12 @@ function avatarStyle(ch, size){
 function msgNode(sess, m, idx){
   const ch = getChar(sess.charId);
   const div = document.createElement("div");
+  if(m.dice){
+    div.className = "dice-msg";
+    div.dataset.idx = idx;
+    div.innerHTML = `<div class="dice-card"><span class="d-ico">🎲</span>${escapeHtml(m.content.replace(/^（🎲 剧情骰子 · 命运插手了）/, ""))}</div>`;
+    return div;
+  }
   div.className = "msg " + (m.role === "user" ? "user" : "ai");
   div.dataset.idx = idx;
   const av = m.role === "user"
@@ -980,16 +1129,32 @@ function renderChat(){
   $("#inputBar").style.display = sess ? "block" : "none";
   $("#scrollDown").classList.remove("show");
   if(!sess){
-    // 欢迎页：回馆内默认画面 + 注入快捷角色入口
+    // 欢迎页：回馆内默认画面 + 注入快捷角色入口 + 剧本杀专区
     applyScene("", true);
     const wq = $("#wQuick");
     wq.innerHTML = `<span style="width:100%;text-align:center;color:var(--text-3);font-size:12px;margin-bottom:2px">— 或直接挑一位今晚的聊伴 —</span>`;
-    for(const ch of state.chars.filter(c => c.builtin).slice(0, 6)){
+    for(const ch of state.chars.filter(c => c.builtin && !c.script).slice(0, 6)){
       const b = document.createElement("button");
       b.className = "q-role";
       b.innerHTML = `<span>${ch.emoji}</span><b>${escapeHtml(ch.name)}</b>`;
       b.addEventListener("click", () => openChar(ch.id));
       wq.appendChild(b);
+    }
+    // 剧本杀专区
+    const scripts = state.chars.filter(c => c.builtin && c.script);
+    if(scripts.length){
+      const wq2 = document.createElement("div");
+      wq2.innerHTML = `<span style="width:100%;text-align:center;color:var(--text-3);font-size:12px;margin:14px 0 2px">— 或翻开一个剧本，让 AI 带你入戏 —</span>`;
+      wq2.style.cssText = "display:flex;flex-wrap:wrap;gap:8px;justify-content:center;width:100%";
+      for(const sc of scripts){
+        const b = document.createElement("button");
+        b.className = "q-role";
+        b.style.borderColor = "var(--accent-line)";
+        b.innerHTML = `<span>${sc.emoji}</span><b>${escapeHtml(sc.name)}</b><span style="color:var(--text-3);font-size:11px">${escapeHtml(sc.script.genre)} · ${sc.script.stages.length}幕</span>`;
+        b.addEventListener("click", () => openChar(sc.id));
+        wq2.appendChild(b);
+      }
+      wq.appendChild(wq2);
     }
     return;
   }
@@ -1000,8 +1165,9 @@ function renderChat(){
   $("#hName").style.color = ch.color;
   $("#hStatusText").textContent = state.generating ? "正在回应……" : `在线 · ${ch.tagline}`;
   $("#charHint").textContent = `${ch.name} · ${DEPTH_PRESETS[state.api.depth]?.label ?? "沉浸"} · 温度 ${state.api.temp} · 守则${state.api.rulesOn ? "开" : "关"}`;
-  // 恢复这场对话的画面
+  // 恢复这场对话的画面与剧本进度
   applyScene(sess.scene || "", true);
+  renderStageBar(sess, sess.stage || null);
   const wrap = document.createElement("div");
   wrap.className = "chat-wrap";
   if(hasSess){
@@ -1030,7 +1196,7 @@ function renderCharList(){
     b.className = "side-item" + (state.activeCharId === ch.id ? " on" : "");
     b.innerHTML = `
       <div class="avatar" style="${avatarStyle(ch)}">${ch.emoji}</div>
-      <div class="s-meta"><div class="s-name">${escapeHtml(ch.name)}</div><div class="s-sub">${escapeHtml(ch.tagline)}</div></div>
+      <div class="s-meta"><div class="s-name">${escapeHtml(ch.name)}${ch.script ? ' <span style="font-size:10px;color:var(--accent);border:1px solid var(--accent-line);border-radius:999px;padding:0 5px;vertical-align:1px">剧本</span>' : ""}</div><div class="s-sub">${escapeHtml(ch.tagline)}</div></div>
       ${ch.builtin ? "" : `<span class="s-del" data-delchar="${ch.id}" title="删除角色">✕</span>`}`;
     b.addEventListener("click", e => {
       if(e.target.dataset.delchar) return;
@@ -1116,26 +1282,32 @@ const DEPTH_PRESETS = {
   deep: { label: "沉浸", desc: "4~8 句起，铺开环境、动作与心理，重点情节可写长段落。", prompt: "默认回复 4~8 句。多用环境描写、动作细节、语气停顿和内心活动把画面铺开；遇到重要情绪节点可以写一段有呼吸感的长回复，但始终保持口语自然，不堆砌辞藻、不变成小说旁白。" }
 };
 
-/* 关键词 → 色板（dark / light 各一套，glow 为光斑与场景点颜色） */
+/* 关键词 → 色板（dark / light 各一套，glow 为光斑与场景点颜色）。顺序即优先级：特异场景在前，"夜"最泛放兜底 */
 const SCENE_PALETTES = [
-  { k: ["夜", "晚", "深夜", "凌晨", "月", "星", "星空"], name: "夜", icon: "🌙", dark: ["#0b1020", "#131b33", "#090d1a"], light: ["#e8ecf7", "#dfe4f2", "#f2f0ea"], glowD: "#5a6ec0", glowL: "#7c8ecf" },
-  { k: ["晨", "清晨", "朝阳", "日出"], name: "晨", icon: "🌅", dark: ["#191410", "#2b2318", "#100d0a"], light: ["#f7efe2", "#f2e6d2", "#faf6ee"], glowD: "#d9a45e", glowL: "#d9a45e" },
+  { k: ["火", "篝火", "烛", "炉", "壁炉", "灯火", "火光"], name: "火光", icon: "🔥", dark: ["#170f08", "#2b1c0d", "#0f0a06"], light: ["#f7ead9", "#f0dfc4", "#faf2e6"], glowD: "#d98e3a", glowL: "#d98e3a" },
+  { k: ["咖啡", "店", "馆", "屋", "室内", "厨房", "客厅", "宿舍", "面包房"], name: "暖屋", icon: "☕", dark: ["#161009", "#241a10", "#0e0a06"], light: ["#f6ecdf", "#efe0cc", "#faf3e9"], glowD: "#c98f5a", glowL: "#c98f5a" },
   { k: ["雨", "雷", "暴雨", "阴", "潮湿", "梅雨"], name: "雨", icon: "🌧", dark: ["#0c1418", "#152229", "#090f13"], light: ["#e2eaee", "#d5e2e8", "#eef2f4"], glowD: "#4a7d8c", glowL: "#6a9dac" },
   { k: ["雪", "冬", "霜", "冰"], name: "雪", icon: "❄️", dark: ["#101419", "#1b232d", "#0c0f13"], light: ["#eef2f6", "#e3eaf1", "#f6f8fa"], glowD: "#8fb3cc", glowL: "#9db8cc" },
-  { k: ["火", "篝火", "烛", "炉", "壁炉", "灯火"], name: "火光", icon: "🔥", dark: ["#170f08", "#2b1c0d", "#0f0a06"], light: ["#f7ead9", "#f0dfc4", "#faf2e6"], glowD: "#d98e3a", glowL: "#d98e3a" },
   { k: ["海", "海边", "浪", "码头", "港", "沙滩"], name: "海", icon: "🌊", dark: ["#091216", "#112430", "#080f13"], light: ["#e0edf2", "#d2e4ec", "#ecf4f7"], glowD: "#3a8ca6", glowL: "#62a8bd" },
   { k: ["林", "森林", "树", "草原", "花", "公园", "山", "竹"], name: "绿意", icon: "🌿", dark: ["#0c1410", "#152219", "#090e0b"], light: ["#e4efe6", "#d6e8da", "#eef5f0"], glowD: "#5a9c6e", glowL: "#6aae7e" },
-  { k: ["咖啡", "店", "馆", "屋", "室内", "厨房", "客厅", "宿舍"], name: "暖屋", icon: "☕", dark: ["#161009", "#241a10", "#0e0a06"], light: ["#f6ecdf", "#efe0cc", "#faf3e9"], glowD: "#c98f5a", glowL: "#c98f5a" },
-  { k: ["黄昏", "傍晚", "夕阳", "暮", "落日"], name: "暮色", icon: "🌇", dark: ["#150f0d", "#281a14", "#0e0a09"], light: ["#f5e8e0", "#eed8cc", "#f8efe9"], glowD: "#c96e4a", glowL: "#c96e4a" }
+  { k: ["黄昏", "傍晚", "夕阳", "暮", "落日"], name: "暮色", icon: "🌇", dark: ["#150f0d", "#281a14", "#0e0a09"], light: ["#f5e8e0", "#eed8cc", "#f8efe9"], glowD: "#c96e4a", glowL: "#c96e4a" },
+  { k: ["晨", "清晨", "朝阳", "日出", "黎明"], name: "晨", icon: "🌅", dark: ["#191410", "#2b2318", "#100d0a"], light: ["#f7efe2", "#f2e6d2", "#faf6ee"], glowD: "#d9a45e", glowL: "#d9a45e" },
+  { k: ["夜", "晚", "深夜", "凌晨", "月", "星", "星空"], name: "夜", icon: "🌙", dark: ["#0b1020", "#131b33", "#090d1a"], light: ["#e8ecf7", "#dfe4f2", "#f2f0ea"], glowD: "#5a6ec0", glowL: "#7c8ecf" }
 ];
 const SCENE_DEFAULT = { name: "馆", icon: "🏮", dark: ["#0e1216", "#141b23", "#0a0d10"], light: ["#f4f1ea", "#ece7dd", "#f4f1ea"], glowD: "#e6b566", glowL: "#c9a45e" };
 
-/** 从文本中剥离 [场景] 块 */
-function splitScene(raw){
-  if (!raw) return { clean: raw || "", scene: null };
-  const m = raw.match(/\[场景\]([\s\S]*?)(?:\[\/场景\]|$)/);
-  if (!m) return { clean: raw, scene: null };
-  return { clean: raw.replace(/\[场景\][\s\S]*?(?:\[\/场景\]|$)/, "").trimEnd(), scene: m[1].trim() };
+/** 从文本中剥离 [场景]/[进度]/[结局] 三种标记块，返回正文与各标记内容 */
+function splitMarkers(raw){
+  let clean = raw || "";
+  let scene = null, stage = null, outcome = null;
+  const s = clean.match(/\[场景\]([\s\S]*?)(?:\[\/场景\]|$)/);
+  if (s) scene = s[1].trim();
+  const p = clean.match(/\[进度\]([\s\S]*?)(?:\[\/进度\]|$)/);
+  if (p) stage = p[1].trim();
+  const o = clean.match(/\[结局\]([\s\S]*?)(?:\[\/结局\]|$)/);
+  if (o) outcome = o[1].trim();
+  clean = clean.replace(/\[(?:场景|进度|结局)\][\s\S]*?(?:\[\/(?:场景|进度|结局)\]|(?=\[(?:场景|进度|结局)\])|$)/g, "").trimEnd();
+  return { clean, scene, stage, outcome };
 }
 function matchPalette(str){
   if (str) for (const p of SCENE_PALETTES) if (p.k.some(k => str.includes(k))) return p;
@@ -1174,6 +1346,7 @@ function buildSystemPrompt(sess){
   const ch = getChar(sess.charId);
   const depth = DEPTH_PRESETS[state.api.depth] || DEPTH_PRESETS.deep;
   const parts = [];
+  if(ch.script) parts.push(SCRIPT_DM_RULES);
   if(state.api.rulesOn) parts.push(RP_RULES);
   parts.push(SCENE_RULE);
   parts.push(`【回复详细度】${depth.prompt}`);
@@ -1302,33 +1475,46 @@ async function generate(sess, mode){
   bubble.innerHTML = `<span class="cursor"></span>`;
 
   let sceneStr = sess.scene || null;
+  let stageStr = sess.stage || null;
   let lastPaintClean = "";
   let lastPaintScene = null;
+  let lastPaintStage = null;
   let lastRender = 0;
   const paint = (full) => {
     const now = performance.now();
     if(now - lastRender < 40) return;
     lastRender = now;
-    const { clean, scene } = splitScene(full);
+    const { clean, scene, stage } = splitMarkers(full);
     lastPaintClean = clean;
     lastPaintScene = scene;
+    lastPaintStage = stage;
     bubble.innerHTML = renderRich(clean) + `<span class="cursor"></span>`;
     if(scene && scene !== sceneStr){ sceneStr = scene; applyScene(scene); }
+    if(stage && stage !== stageStr){ stageStr = stage; renderStageBar(sess, stage); }
     const body = $("#chatBody");
     if(body.scrollHeight - body.scrollTop - body.clientHeight < 160) body.scrollTop = body.scrollHeight;
   };
   try{
     const full = await streamChat(reqMsgs, (_, f) => paint(f));
-    const { clean, scene } = splitScene(full);
-    if(!clean.trim() && !scene) throw new Error("模型返回了空内容");
+    const { clean, scene, stage, outcome } = splitMarkers(full);
+    if(!clean.trim() && !scene && !stage) throw new Error("模型返回了空内容");
     placeholder.content = clean.trim();
     if(scene){ sceneStr = scene; applyScene(scene); }
+    if(stage){ stageStr = stage; renderStageBar(sess, stage); }
     placeholder.ts = nowTs();
+    if(outcome){
+      // DM 有时会把场景标记写进结局块——剥出来应用到背景，结局卡只留叙述
+      const sm2 = outcome.match(/\[场景\]([\s\S]*?)(?:\[\/场景\]|$)/);
+      if(sm2){ sceneStr = sm2[1].trim(); applyScene(sceneStr); }
+      sess.outcome = outcome.replace(/\[场景\][\s\S]*?(?:\[\/场景\]|$)/g, "").replace(/\[\/?场景\]/g, "").trim();
+      setTimeout(() => showOutcome(getChar(sess.charId), sess.outcome), 900);
+    }
   }catch(e){
     if(e.name === "AbortError"){
       if(lastPaintClean){
         placeholder.content = lastPaintClean + "……";
         if(lastPaintScene){ sceneStr = lastPaintScene; applyScene(lastPaintScene); }
+        if(lastPaintStage){ stageStr = lastPaintStage; renderStageBar(sess, lastPaintStage); }
       }else{
         sess.messages.pop();
       }
@@ -1344,8 +1530,9 @@ async function generate(sess, mode){
     }
   }
   bubble.classList.remove("streaming");
-  // 会话元数据（场景写入会话，刷新/切换后画面可复现）
+  // 会话元数据（场景/进度/结局写入会话，刷新/切换后可复现）
   if(sceneStr) sess.scene = sceneStr;
+  if(stageStr) sess.stage = stageStr;
   sess.updatedAt = nowTs();
   if(sess.title === "新对话"){
     const firstUser = sess.messages.find(m => m.role === "user" && !m.err);
@@ -1445,6 +1632,21 @@ function toast(msg, type){
  * 接入设置
  * ================================================================ */
 function renderPresetGrid(){
+  // 存档切换条（三档独立保存）
+  const pg = $("#profileGrid");
+  if(pg){
+    pg.innerHTML = "";
+    state.profiles.forEach((p, i) => {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "preset-btn" + (state.profileIdx === i ? " on" : "");
+      const filled = p.key && p.model;
+      b.innerHTML = `${p.name}${filled ? ' <span style="opacity:.7">●</span>' : ''}`;
+      b.title = filled ? `${PRESETS[p.preset]?.name || "自定义"} · ${p.model}` : "空存档";
+      b.addEventListener("click", () => switchProfile(i));
+      pg.appendChild(b);
+    });
+  }
   const grid = $("#presetGrid");
   grid.innerHTML = "";
   for(const [k, v] of Object.entries(PRESETS)){
@@ -1505,6 +1707,34 @@ function openApiModal(){
   $("#rulesChk").checked = !!state.api.rulesOn;
   openModal("modalApi");
 }
+/** 弹窗内切换存档：当前表单暂存回旧档，再载入目标档 */
+function switchProfile(idx){
+  if(idx === state.profileIdx) return;
+  // 收集当前表单 → 暂存旧档
+  state.api.preset = state.api.preset; // preset 由点击维护
+  state.api.base = state.api.preset === "custom" ? $("#apiBase").value.trim() : PRESETS[state.api.preset].base;
+  state.api.key = $("#apiKey").value.trim();
+  state.api.model = $("#apiModel").value.trim();
+  state.api.temp = $("#apiTemp").value;
+  state.api.max = +$("#apiMax").value || 1024;
+  state.api.rulesOn = $("#rulesChk").checked;
+  persistProfile();
+  // 载入目标档
+  state.profileIdx = idx;
+  state.api = {...state.api, ...state.profiles[idx]};
+  store.set("activeProfile", idx);
+  state.api.depth = state.profiles[idx].depth || "deep";
+  renderPresetGrid();
+  syncPresetUI();
+  $("#apiKey").value = state.api.key || "";
+  $("#apiModel").value = state.api.model || "";
+  $("#apiTemp").value = state.api.temp;
+  $("#tempVal").textContent = Number(state.api.temp).toFixed(2);
+  $("#apiMax").value = state.api.max;
+  $("#rulesChk").checked = !!state.api.rulesOn;
+  updateApiStatus();
+  toast(`已切换到「${state.profiles[idx].name}」——保存后生效`, "ok");
+}
 function saveApiModal(){
   state.api.base = state.api.preset === "custom" ? $("#apiBase").value.trim() : PRESETS[state.api.preset].base;
   state.api.key = $("#apiKey").value.trim();
@@ -1512,9 +1742,9 @@ function saveApiModal(){
   state.api.temp = $("#apiTemp").value;
   state.api.max = +$("#apiMax").value || 1024;
   state.api.rulesOn = $("#rulesChk").checked;
-  saveApi(); updateApiStatus(); renderChat();
+  saveApi(); persistProfile(); updateApiStatus(); renderChat();
   closeModal("modalApi");
-  toast("接入设置已保存", "ok");
+  toast(`已保存到「${state.profiles[state.profileIdx].name}」`, "ok");
 }
 async function testConnection(){
   const btn = $("#testBtn");
@@ -1552,7 +1782,8 @@ function updateApiStatus(){
   const dot = $("#apiStatusBtn .dot");
   dot.style.background = ok ? "var(--ok)" : "var(--text-3)";
   dot.style.boxShadow = ok ? "0 0 6px var(--ok)" : "none";
-  $("#apiStatusText").textContent = ok ? `${PRESETS[state.api.preset]?.name || "自定义"} · 已接入` : "设置 API";
+  const pname = state.profiles ? state.profiles[state.profileIdx]?.name : "";
+  $("#apiStatusText").textContent = ok ? `${pname} · ${PRESETS[state.api.preset]?.name || "自定义"}` : "设置 API";
 }
 
 /* ================================================================
@@ -1751,7 +1982,9 @@ function closeDrawer(){
 }
 function quickAction(act){
   const sess = ensureSession(); if(!sess) return;
-  if(act === "continue"){
+  if(act === "dice"){
+    rollDice();
+  }else if(act === "continue"){
     if(!sess.messages.length) return toast("还没有对话可以继续", "err");
     if(state.generating) return;
     generate(sess, "continue");
@@ -2007,8 +2240,58 @@ async function forgeCharacter(){
 }
 
 /* ================================================================
- * 启动
+ * 剧本杀：进度条 / 结局卡 / 剧情骰子
  * ================================================================ */
+/** 渲染剧本进度条（仅剧本角色会话显示） */
+function renderStageBar(sess, stageStr){
+  const ch = getChar(sess.charId);
+  const bar = $("#stageBar");
+  if(!ch || !ch.script || !stageStr){ bar.classList.remove("show"); return; }
+  const m = stageStr.match(/第\s*([0-9一二三四五六七八九十]+)\s*幕/);
+  const CN = { "一":1,"二":2,"三":3,"四":4,"五":5,"六":6,"七":7,"八":8,"九":9,"十":10 };
+  let num = m ? (/\d/.test(m[1]) ? +m[1] : (CN[m[1]] || 1)) : 1;
+  const total = ch.script.stages.length;
+  const stageName = ch.script.stages[Math.min(num, total) - 1] || stageStr;
+  const dots = ch.script.stages.map((_, i) =>
+    `<span class="st-dot ${i < num - 1 ? "done" : i === num - 1 ? "now" : ""}"></span>`).join("");
+  bar.innerHTML = `<span class="st-num">第${num}/${total}幕</span><span class="st-dots">${dots}</span><span>${escapeHtml(stageName.split("·")[1] || stageStr)}</span>`;
+  bar.classList.add("show");
+}
+/** 结局卡：解析 [结局]标题|叙述 后弹出 */
+function showOutcome(ch, outcomeStr){
+  const [title, ...rest] = outcomeStr.split("|");
+  const body = rest.join("|").trim() || title;
+  $("#outcomeIco").textContent = ch ? ch.emoji : "🎭";
+  $("#outcomeTitle").textContent = (ch ? ch.name + " · " : "") + (title || "结局");
+  $("#outcomeBody").innerHTML = escapeHtml(body).replace(/\n/g, "<br>");
+  openModal("modalOutcome");
+}
+/* 剧情骰子事件卡（按题材分组，投掷后注入剧情） */
+const DICE_EVENTS = {
+  daily: ["突然停电三秒——再来电时，桌上多了一杯还冒热气的茶。", "窗外传来熟悉的脚步声，但那个时间点，那个人本不该出现在这里。", "手机弹出一条推送：一条你从没搜过、却正好是你们刚才聊到的话题的新闻。", "角落里的旧收音机自己响了，播的是几十年前的天气预报。", "钥匙串上多了一把谁都不认识的钥匙。", "门铃响了一声，门外没有人，只有一片被折得整整齐齐的落叶。"],
+  mystery: ["一个陌生人托人捎来口信：『他让你今晚之前离开这座城。』", "你在抽屉夹层里摸到一张名单，你自己的名字排在最后一个，名字旁边画了一个问号。", "所有钟表都停在同一时刻——包括你五分钟前刚对过时的那块。", "消失的人留下了七个数字，按电话键盘排下来，是一句倒着念的话。", "照片里多了一个背影，放大之后，那件外套你见过——就在今天早上。"],
+  horror: ["走廊尽头的灯又灭了一盏。这次灭灯之前，你听见了灯泡里传出的、很轻的哼歌声。", "镜子里的你，比你晚了半秒才抬手。", "点名册上多了一行字，墨迹未干。写的日期是今天，被点到的人此刻就在这栋楼里。", "你身后传来一声很轻的、椅子腿蹭过地板的声音。你刚刚才站起来。", "墙上的挂历翻到了很久以前的某一页——那一页被人用指甲掐出了一道深深的折痕。"],
+  fantasy: ["壁炉的火苗忽然变成淡蓝色——在老规矩里，这代表有旧识正在赶来的路上。", "一只信鸦落在窗台，脚环上的编号属于一个已经消失二十年的商会。", "酒馆地窖深处传来敲击声，节奏是旧时代矿工的求救暗号。", "你口袋里的铜币自己翻了个面，币面上的头像换成了你从未见过的女人。"],
+  scifi: ["站载广播用平静的合成音插播了一条不存在的例行公告。", "生命体征监测屏上，多出了一个静止在通风管道里的心跳。", "所有屏幕闪过同一帧画面：一扇门，门牌崭新，与你刚刚在维护通道尽头摸到的那扇一模一样。", "你手环的时间戳跳回了三天前，又猛地追了回来。期间的三分钟，站内监控显示你一直站在原地。"]
+};
+/** 投掷剧情骰子：抽一张事件卡，以玩家的名义注入剧情 */
+function rollDice(){
+  const sess = ensureSession();
+  if(!sess) return toast("先选一个角色开局", "err");
+  if(state.generating) return toast("等这一轮结束再掷骰子", "err");
+  const ch = getChar(sess.charId);
+  let pool = [...DICE_EVENTS.daily];
+  const genreMap = { "悬疑":"mystery", "恐怖":"horror", "奇幻":"fantasy", "科幻":"scifi" };
+  const g = ch && (ch.script ? genreMap[ch.script.genre] : null);
+  if(g && Math.random() < 0.7) pool = DICE_EVENTS[g];
+  else pool = pool.concat(DICE_EVENTS[g] || [], Math.random() < 0.5 ? DICE_EVENTS.mystery : DICE_EVENTS.fantasy);
+  const ev = pool[Math.floor(Math.random() * pool.length)];
+  sess.messages.push({ role:"user", content:`（🎲 剧情骰子 · 命运插手了）${ev}`, ts: nowTs(), dice:true });
+  appendMsgNode(sess, sess.messages[sess.messages.length - 1]);
+  saveSessions();
+  generate(sess, "reply");
+}
+
 loadState();
 switchTab(state.sideTab);
 bindEvents();
