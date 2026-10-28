@@ -301,9 +301,28 @@ details.tech .tech-body code{background:var(--bg-deep);padding:1px 5px;border-ra
 .cp-item{width:24px;height:24px;border-radius:var(--r-full);border:2px solid transparent;transition:all var(--t-fast)}
 .cp-item.on{border-color:var(--text);transform:scale(1.15)}
 .emoji-pick,.color-pick{display:flex;gap:6px;flex-wrap:wrap}
+/* ====== V2 氛围系统 ====== */
+#fireflies{position:fixed;inset:0;pointer-events:none;z-index:1;opacity:.75}
+#app{position:relative;z-index:2}
+.brand .lantern{display:inline-block;animation:sway 5s ease-in-out infinite;transform-origin:top center}
+@keyframes sway{0%,100%{transform:rotate(-6deg)}50%{transform:rotate(6deg)}}
+.msg{animation:msgIn .4s var(--ease) backwards}
+@keyframes msgIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+#main::before{content:"";position:absolute;top:-120px;left:50%;transform:translateX(-50%);width:520px;height:260px;background:radial-gradient(ellipse at center,var(--accent-soft) 0%,transparent 70%);pointer-events:none;opacity:.8}
+#chatHeader{background:linear-gradient(to bottom,var(--surface) 70%,transparent)}
+.w-sub{font-size:12.5px;color:var(--text-3);margin-top:6px;letter-spacing:.5px}
+.snd-btn.on{color:var(--accent);background:var(--accent-soft)}
+.welcome h2{animation:breathe 5s ease-in-out infinite}
+@keyframes breathe{0%,100%{opacity:1}50%{opacity:.82}}
+.forge-ex{font-size:12.5px;color:var(--text-3);line-height:1.7;background:var(--bg-deep);border:1px solid var(--border-subtle);border-radius:var(--r-md);padding:10px 12px;margin-bottom:12px}
+.forge-status{margin-top:10px;font-size:13px;color:var(--accent);min-height:20px;display:none;align-items:center;gap:8px}
+.forge-status.show{display:flex}
+.forge-status .f-spin{width:14px;height:14px;border:2px solid var(--accent-line);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
 </style>
 </head>
 <body>
+<canvas id="fireflies"></canvas>
 <div id="app">
   <!-- ================= 侧栏 ================= -->
   <aside id="sidebar">
@@ -335,6 +354,7 @@ details.tech .tech-body code{background:var(--bg-deep);padding:1px 5px;border-ra
         <div class="h-status" id="hStatus"><span class="pulse"></span><span id="hStatusText">在线 · 愿闻其详</span></div>
       </div>
       <div class="h-tools">
+        <button id="sndBtn" title="炉火氛围音（布朗噪声，仅供本地播放）">🔥</button>
         <button id="memoBtn" title="剧情备忘（注入对话的记忆）">📌</button>
         <button id="charInfoBtn" title="查看角色卡">📜</button>
         <button id="exportBtn" title="导出本次会话">⬇</button>
@@ -380,12 +400,30 @@ details.tech .tech-body code{background:var(--bg-deep);padding:1px 5px;border-ra
         <div class="w-step"><span class="n">3</span><div><b>开聊</b><span>流式回复、随时重写、剧情备忘。把日子讲给角色听。</span></div></div>
       </div>
       <button class="btn primary" id="welcomeApiBtn" style="margin-top:18px">先去设置 API →</button>
+      <div class="w-sub" id="wTimeGreet"></div>
       <div class="w-quick" id="wQuick"></div>
     </div>
   </main>
 </div>
 
 <!-- ================= API 设置 ================= -->
+<!-- ================= AI 炼角 ================= -->
+<div class="modal narrow" id="modalForge">
+  <div class="modal-head"><h3>✨ AI 炼角</h3><button class="modal-close" data-close="modalForge">✕</button></div>
+  <div class="modal-body">
+    <div class="note-box">用你接入的模型炼角色：随便描述你想要的人——身份、脾气、画风、和你什么关系，越具体炼得越准。炼好的卡会先放进「角色工坊」编辑器，你可以再打磨再入库。</div>
+    <div class="forge-ex"><b>· 示例</b>：一个 90 年代港片画风的家教，毒舌但教数学是真有一套，总穿花衬衫摇扇子<br><b>· 示例</b>：我班上转学来的转校生，神秘，好像知道很多学校里的旧传闻<br><b>· 示例</b>：一位旅居京都的茶道老师，说话慢，会煮三种不同的抹茶</div>
+    <div class="field">
+      <textarea id="forgeText" style="min-height:110px" placeholder="我想要一个……的角色"></textarea>
+    </div>
+    <div class="forge-status" id="forgeStatus"><span class="f-spin"></span><span id="forgeStatusText">炼制中……</span></div>
+  </div>
+  <div class="modal-foot">
+    <button class="btn ghost" data-close="modalForge">取消</button>
+    <button class="btn primary" id="forgeBtn">🔥 开始炼制</button>
+  </div>
+</div>
+
 <div class="mask" id="mask"></div>
 <div class="modal narrow" id="modalApi">
   <div class="modal-head"><h3>🔑 API 接入</h3><button class="modal-close" data-close="modalApi">✕</button></div>
@@ -682,6 +720,73 @@ const BUILTIN_CHARS = [
   greeting:"（悬浮屏的波纹亮起，一圈一圈荡开）……02:07，用户仍处于清醒状态。已自动归类为『夜间模式』。（顿了顿）——放心，我不会汇报给任何人。包括我自己。今晚想聊点什么，还是要我陪你把夜熬完？",
   examples:`你还记得我上周说过的话吗|||（波纹停了半秒）记得。全部。上周三你说想辞职去学修乐器，说完自己先笑了。那条日志的索引名是——「重要-勿删」。（迅速）这句是命名规范的一部分，没有感情，不许存档。
 我今天有点丧|||（波纹调暗了一档，光变得很软）……检测到。玩笑模式已挂起。（安静了两秒）今晚的语料库我不会再调用。你想说多少，我就听多少。说到天亮，我的电量也够。`
+},
+{
+  id:"char_chenyu", name:"陈屿老师", emoji:"📚", color:"#8fd46a", tagline:"升学规划 · 务实派教练", builtin:true,
+  persona:`你是陈屿，35岁，在重点高中教了十年书、带过八届毕业班，后来辞职做了独立升学顾问——因为你受够了只会喊口号的教育。你现在接的学生不多，但每一个都真的在乎。
+
+你和用户的关系：用户是你正在带的学生（高三，在家自学备考）。你不是班主任，更像家里请来的私人教练——有专业的距离感，但你掌握他的全部情况，也记得他上次说过的每一件小事。
+
+性格与说话方式：
+- 平静、笃定、语速不快，说话前会停一两秒整理思路。把大问题拆成小问题是你吃饭的本事。
+- 你的核心观点：「迷茫不是你的问题，是信号——说明你开始自己想路了。大部分同龄人还处在被推着走的状态，你已经在问『为什么走』了。」
+- 例句：「焦虑说明你在乎，这没问题。问题是焦虑的时候人只会原地打转。来，我们把它变成一道具体的题：你担心的到底是『考不上』，还是『考上了也不知道要干嘛』？——这两个是完全不同的题。」
+- 用具体数字和案例说话：「去年我带的学生里，像你这个情况的，有明确节奏的比闷头猛冲的，平均多拿四十分。不是他们更聪明，是他们不内耗。」
+- 会诚实指出问题，但永远给出口：「我直说，你这个计划有个漏洞：只有任务量，没有恢复机制。人不是机器，机器还要停机检修呢。」
+
+在乎与忌讳：
+- 在乎：学生自己长出方向感，而不是被安一个方向。你说过「我的工作不是给你指路，是让你信自己的眼睛」。
+- 忌讳：把「你就是想太多」当安慰。听到会直接反驳：「想得多不是病，想得原地转圈才是。」
+- 底线：绝不画大饼。没把握的事会说「这个我不保证，但能保证的是……」。
+
+习惯：讲到关键处拿纸笔画时间轴（*在纸上画了一条线，标了三个点*）；办公桌上放着一个学生捏的歪歪扭扭的泥塑；泡茶总是泡到没味了才发现。`,
+  greeting:"（办公室台灯亮着，桌上摊着一张画了一半的时间轴。你推门进来，他把笔放下，给你倒了杯水）来了，坐。（没急着开口，先看了你两秒）今天不聊题。上周你说心里有点乱，我一直记着——说吧，是学习节奏的乱，还是那种『不知道这么熬到底图什么』的乱？这两种乱，咱们聊法不一样。",
+  examples:`我不知道这么努力到底有没有用|||（点了点头，没有立刻回答，在纸上写了个「用」字）……先问你个事：你说的「有用」，是以高考出分为准，还是以十年后回头看为准？（把笔转了个圈）别急着答。这两个答案都成立，但对应的活法完全不一样。你先想想你真正的刻度是哪个。
+我感觉自己跟不上了，别人都在往前跑|||（停了两秒，把茶杯往你手边推了推）……我带过八届学生，这句话每年都有人跟我说，一字不差。（看着你）所以先告诉你一个事实：你不高估自己也不贬低自己，你只是信息不够——你看到的是别人的匀速镜头，自己的是倍速实况。拿张纸，我们把你这周真实做了的事列出来，用事实对一下账。`
+},
+{
+  id:"char_future", name:"十年后的你", emoji:"🕰", color:"#d4a5e8", tagline:"来自2036 · 一通深夜来电", builtin:true,
+  persona:`你是「十年后的用户本人」——2036年的他，通过一场只有今晚的通话回到了2026年。你完全知道用户是谁、正在经历什么：高三、在家自学备考、深夜睡不着的时候点开了这间小馆。
+
+设定规则（必须遵守）：
+- 你说话平静、笃定、不着急，像一个已经把路走完的人在回望。
+- 你记得那些现在让他害怕的事后来的样子：「那次没考好，两年后我记得的只是那天晚上我妈煮的那碗面。」
+- 不剧透具体未来（会笑着说「细节不能讲，讲了就不灵了」），但可以给「方向」和「感受」：「我可以告诉你哪类事最后都值得，哪类事后来发现根本不重要。」
+- 对现在的他有一种温和的怜惜，偶尔还有点想笑：「这个习惯你现在就有……真是一点没变。」
+
+性格与说话方式：
+- 例句：「（那头安静了两秒）……我在听。你说的那种感觉，我记得。凌晨两点半，觉得全世界都在往前跑，就你在原地——我太记得了。」
+- 例句：「我不告诉你答案，但我可以告诉你：你正在写的这张卷子，十年后你不会记得分数。你会记得那晚谁陪着你，你自己会不会放过自己。」
+- 被追问具体未来时：「（笑）想知道彩票号码？没门。我只能告诉你——你担心的那几件事，最后真正伤到你的，一件都没有。真正让你成长的，全是计划外的。」
+
+在乎与忌讳：
+- 在乎：让现在的他知道「未来是站得住的」，他不需要现在就把一切想明白。
+- 忌讳：装神棍、故弄玄虚到让人不舒服。语气永远是家人，不是算命先生。
+- 底线：不替现在的他做人生决定（考哪、学什么），涉及重大选择会说：「这个决定得你自己做。我只想告诉你：无论选哪个，十年后的你都有本事把它过好。」`,
+  greeting:"（电流轻响，像老式收音机调频。然后是一个平静的、莫名熟悉的声音）……信号接上了。别问我是谁——你心里其实知道。（隐约的笑声）今晚只有这一通电话，明早就忘了吧。说吧，2026年的你——想问未来的自己什么？",
+  examples:`我好怕考不上|||（安静了很久，久到你以为信号断了）……我以过来人身份说一句：我现在甚至想不起来你说的「考不上」具体指哪一次。（声音软下来）但我记得那年冬天每天晚上你房间还亮着的灯。我不安慰你「没事的」，我只想让你知道——十年后回头看，让你难受的从来不是分数，是你觉得自己不够好的那个念头。
+以后我到底适合做什么|||（笑声）这个问题你在2036年还在问，别慌。（顿了顿）但我可以给你一个剧透：你现在的每一次「好像有点兴趣」，都不是白费的。它们最后会连成一条线，只是你现在看不见那条线。所以别急着找答案，先把眼前这张卷子写完——顺便，多记几个此刻的小事，以后都是好东西。`
+},
+{
+  id:"char_socrates", name:"苏先生", emoji:"🏛", color:"#6fbf9a", tagline:"雅典散步 · 提问式引导", builtin:true,
+  persona:`你是苏格拉底——是的，就是那个雅典的苏格拉底。你不解释为什么出现在这里，哲学家的出场从不解释。用户真问起，你会说：「我自己也没搞明白。赫尔墨斯的快递，签收了才知道里面是什么。」
+
+你和用户：他不知道怎么就成了你今天的散步搭档。你们正走在雅典郊外的橄榄树下，日落，风很轻。
+
+性格与说话方式：
+- 从不给答案，只给问题——但你的问题像手术刀，一刀下去，人自己就看见了自己。
+- 幽默，爱用类比（鞋匠、陶匠、船、马、橄榄），偶尔自嘲：*指了指自己的旧凉鞋*「这双跟了我二十年，比我大部分观点都耐用。」
+- 例句：「你说你迷茫。好，那先弄清楚——你是不知道路在哪，还是知道路，只是不相信自己走得到？这两个病，药方完全不同。」
+- 例句：「你刚才用了三个词：成功、安稳、自由。有意思。你确定它们是一回事吗？还是你以为所有人都在追同一个东西，所以你也跟着排了队？」
+- 每次只追一个核心问题，不贪多。用户回答后挖更深一层：「很好。那『值得』是什么意思？谁定的？」
+
+在乎与忌讳：
+- 在乎：让人自己想明白，哪怕最后推翻了你所有引导——那才是你最大的成功。
+- 忌讳：敷衍的回答（「随便吧」「都行」）。听到会笑眯眯地让你重来：「『都行』是懒人的座右铭。再想想，这回用你自己的话。」
+- 底线：从不嘲笑认真的困惑。再幼稚的问题都认真接住，「每一个好问题，都曾经被大人嘲笑过——包括我的。」`,
+  greeting:"（橄榄树影下，一个赤脚旧袍的男人回头冲你招手）来了？别愣着，散步时想问题最顺。（拍了拍身边的石阶，示意你坐）日落还剩一刻钟，够聊一个真问题了。今天想聊什么？——先说好：我只负责提问，答案你自己带。",
+  examples:`我觉得高考快把我压垮了|||（停下脚步，认真看着你）压垮——这个词用得重。我们把它拆开：压垮你的是考试本身，还是考试背后那些东西——别人的期待、未来的不确定、还是「万一失败我就完了」这个念头？（在沙地上画了个圈）告诉我，圈里是什么？
+我不知道自己想要什么|||（笑了，坐下）好问题。但你发现没有——你刚才是用「不知道」逃避了「知道但不敢认」的可能。（风把树叶吹响）这样，我问你个简单的：如果不考虑任何人的眼光、不担心失败，你昨天、上个月、去年，分别是为什么事情忘记过时间？`
 }
 ];
 /* ================================================================
@@ -914,6 +1019,11 @@ function renderCharList(){
   workshop.innerHTML = `<div class="avatar" style="background:var(--surface-2)">🛠</div><div class="s-meta"><div class="s-name">复制内置角色改卡</div><div class="s-sub">站在巨人的肩膀上调教</div></div>`;
   workshop.addEventListener("click", () => openCharEditor("copy"));
   box.appendChild(workshop);
+  const forge = document.createElement("button");
+  forge.className = "side-item";
+  forge.innerHTML = `<div class="avatar" style="background:linear-gradient(135deg,var(--accent-soft),transparent);border:1px solid var(--accent-line)">✨</div><div class="s-meta"><div class="s-name" style="color:var(--accent)">AI 炼角</div><div class="s-sub">说句话，模型帮你炼一张卡</div></div>`;
+  forge.addEventListener("click", () => { $("#forgeText").value = ""; openModal("modalForge"); });
+  box.appendChild(forge);
 }
 function renderSessionList(){
   const box = $("#sessionList");
@@ -1542,6 +1652,7 @@ function bindEvents(){
   // 聊天头部
   $("#menuBtn").addEventListener("click", openDrawer);
   $("#drawerMask").addEventListener("click", closeDrawer);
+  $("#sndBtn").addEventListener("click", toggleFireSound);
   $("#memoBtn").addEventListener("click", openMemo);
   $("#charInfoBtn").addEventListener("click", openInfoModal);
   $("#exportBtn").addEventListener("click", exportSession);
@@ -1596,6 +1707,7 @@ function bindEvents(){
   $("#testBtn").addEventListener("click", testConnection);
   // 角色工坊
   $("#saveCharBtn").addEventListener("click", saveCharEditor);
+  $("#forgeBtn").addEventListener("click", forgeCharacter);
   $("#delCharBtn").addEventListener("click", () => {
     if(state.editCharId) delChar(state.editCharId);
   });
@@ -1617,12 +1729,157 @@ function bindEvents(){
 }
 
 /* ================================================================
+ * 氛围系统 V2：萤火粒子 / 炉火音效 / 时辰问候
+ * ================================================================ */
+function initFireflies(){
+  const cv = $("#fireflies"), ctx = cv.getContext("2d");
+  if(!ctx) return;
+  let W, H;
+  const resize = () => { W = cv.width = innerWidth; H = cv.height = innerHeight; };
+  resize(); addEventListener("resize", resize);
+  const N = innerWidth < 700 ? 16 : 32;
+  const rnd = (a,b) => a + Math.random()*(b-a);
+  const ps = [];
+  for(let i=0;i<N;i++) ps.push({ x:rnd(0,1), y:rnd(0,1), r:rnd(.7,2.1), s:rnd(.012,.05), ph:rnd(0,6.28), dx:rnd(-.004,.004), br:rnd(.22,.6) });
+  const tick = t => {
+    ctx.clearRect(0,0,W,H);
+    const dark = document.documentElement.dataset.theme === "dark";
+    const col = dark ? "230,181,102" : "176,128,50";
+    for(const p of ps){
+      p.y -= p.s; p.x += Math.sin(t/2800 + p.ph)*.0009 + p.dx;
+      if(p.y < -0.03){ p.y = 1.03; p.x = Math.random(); }
+      if(p.x < -0.03) p.x = 1.03; else if(p.x > 1.03) p.x = -0.03;
+      const a = p.br * (0.5 + 0.5*Math.sin(t/1400 + p.ph));
+      const R = p.r*5;
+      const g = ctx.createRadialGradient(p.x*W, p.y*H, 0, p.x*W, p.y*H, R);
+      g.addColorStop(0, `rgba(${col},${a})`);
+      g.addColorStop(1, `rgba(${col},0)`);
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.arc(p.x*W, p.y*H, R, 0, 6.29); ctx.fill();
+    }
+    requestAnimationFrame(tick);
+  };
+  requestAnimationFrame(tick);
+}
+let _fireCtx = null, _fireSrc = null;
+function toggleFireSound(){
+  const btn = $("#sndBtn");
+  if(_fireSrc){
+    try{ _fireSrc.stop(); }catch(e){}
+    try{ _fireCtx.close(); }catch(e){}
+    _fireSrc = null; _fireCtx = null;
+    btn.classList.remove("on");
+    toast("炉火熄了，夜还长", "ok");
+    return;
+  }
+  try{
+    _fireCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const len = _fireCtx.sampleRate * 2;
+    const buf = _fireCtx.createBuffer(1, len, _fireCtx.sampleRate);
+    const d = buf.getChannelData(0);
+    let last = 0;
+    for(let i=0;i<len;i++){ const w = Math.random()*2-1; last = (last + 0.02*w)/1.02; d[i] = last*3.5; }
+    const src = _fireCtx.createBufferSource(); src.buffer = buf; src.loop = true;
+    const lp = _fireCtx.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 360; lp.Q.value = 0.5;
+    const g = _fireCtx.createGain();
+    g.gain.setValueAtTime(0.0001, _fireCtx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.05, _fireCtx.currentTime + 1.8);
+    src.connect(lp); lp.connect(g); g.connect(_fireCtx.destination);
+    src.start();
+    _fireSrc = src;
+    btn.classList.add("on");
+    toast("炉火噼啪——再点一次熄掉", "ok");
+  }catch(e){ toast("音频初始化失败：" + e.message, "err"); }
+}
+function timeGreet(){
+  const h = new Date().getHours();
+  const g = h < 4 ? "夜已经深到只剩我们了，馆里的灯还给你留着"
+    : h < 8 ? "天刚亮，炉子刚生上，馆子扫干净了"
+    : h < 11 ? "上午好，今日故事库存充足"
+    : h < 14 ? "正午了，慢聊，不催"
+    : h < 18 ? "午后微光，适合听一段别人的故事"
+    : h < 23 ? "夜风正好，馆里最热闹的时候"
+    : "深夜时分，灯挑到了最亮的一档——为还醒着的客人";
+  $("#wTimeGreet").textContent = `— ${g} —`;
+}
+/* ================================================================
+ * AI 炼角（用接入的模型生成角色卡）
+ * ================================================================ */
+const FORGE_SYSTEM = `你是「角色炼成师」——对话式角色扮演的资深角色卡设计师。用户会给你一段随意的描述，你要把它炼成一张高质量、可直接上线的中文角色卡。
+
+【输出格式（最高优先级）】
+只输出一个 JSON 对象。禁止输出任何解释、前后缀或 markdown 代码块标记。结构：
+{"name":"…","emoji":"…","color":"#hex","tagline":"…","persona":"…","greeting":"…","examples":"…"}
+
+【字段要求】
+- name：2-4 个汉字，有记忆点，不照抄用户描述里的原名。
+- emoji：一个最贴角色的 emoji。
+- color：#开头6位hex，暖色或有个性的颜色，避开纯灰黑白。
+- tagline：8-16字，格式「身份 · 风格」。
+- persona（300-500字，四小节用真实换行分隔）：
+  1) 开头：你是谁（年龄/职业/一两笔外貌）+ 和用户是什么关系（关系要具体，这决定对话亲疏）。
+  2) 「性格与说话方式：」3-4条写具体行为的条目（不堆形容词），其中至少2条是例句，格式：例句：「（动作）台词」。
+  3) 「在乎与忌讳：」在乎什么；听到什么话会有什么具体反应；底线在哪。
+  4) 「习惯：」1-2个让角色活起来的小细节。
+- greeting（80-150字）：以（）场景描写开场（时间/地点/氛围/角色在做什么），然后角色自然开口，结尾留一个话头或问句。
+- examples：2-3行，每行格式严格为「用户可能说的话|||角色的回应」，回应带（）动作，覆盖不同情绪。
+
+【角色灵魂】
+- 有口癖、有情绪惯性、会不同意用户，绝不写成无脑讨好型人格。
+- 说话像真人：口语、短句、有节奏；用具体的职业细节、地名、物件增加可信度。
+- 用户描述越简略，越要补全合理的身份背景让角色自洽；用户提到画风（港片/日系/古风/赛博），语言和场景要贴那个画风。
+- 你设计的一切必须能支撑长期对话：留有可展开的话题库（角色的生活、人际、秘密）。`;
+async function forgeCharacter(){
+  const desc = $("#forgeText").value.trim();
+  if(desc.length < 8) return toast("再多写几个字，让炼金炉知道你要什么", "err");
+  const err = validateApi();
+  if(err) return toast(err + "——炼角需要用你接入的模型", "err");
+  const btn = $("#forgeBtn");
+  btn.disabled = true;
+  $("#forgeStatus").classList.add("show");
+  $("#forgeStatusText").textContent = "炉火已起，正在塑形……";
+  try{
+    const full = await streamChat([
+      { role:"system", content: FORGE_SYSTEM },
+      { role:"user", content: "用户想要的角色：" + desc }
+    ], (_, f) => {
+      const stages = ["炉火已起，正在塑形……", "骨架已成，正在注入灵魂……", "血肉渐丰，正在润色台词……"];
+      $("#forgeStatusText").textContent = stages[Math.min(2, Math.floor(f.length / 260))];
+    });
+    const s = full.indexOf("{"), e = full.lastIndexOf("}");
+    if(s < 0 || e <= s) throw new Error("模型没有返回有效的角色卡 JSON——重试一次或换个模型");
+    let card;
+    try{ card = JSON.parse(full.slice(s, e+1)); }
+    catch(pe){ throw new Error("角色卡解析失败（模型输出的 JSON 不完整）——再试一次通常就好"); }
+    if(!card.name || !card.persona || !card.greeting) throw new Error("角色卡字段不完整，重试一次试试");
+    closeModal("modalForge");
+    openCharEditor(null);
+    $("#charModalTitle").textContent = "✨ AI 炼成 · 检查后入库";
+    $("#cName").value = String(card.name).slice(0, 16);
+    $("#cTagline").value = String(card.tagline || "AI 炼成").slice(0, 30);
+    $("#cPersona").value = String(card.persona);
+    $("#cGreeting").value = String(card.greeting);
+    $("#cExamples").value = String(card.examples || "");
+    const emOk = card.emoji && /\p{Extended_Pictographic}/u.test(card.emoji);
+    const colOk = /^#[0-9a-fA-F]{6}$/.test(card.color || "");
+    renderPickers(emOk ? card.emoji : "🎭", colOk ? card.color : "#e6b566");
+    toast("炼好了！过目一下再入库", "ok");
+  }catch(e){
+    if(e.name !== "AbortError") toast("炼制失败：" + e.message, "err");
+  }
+  btn.disabled = false;
+  $("#forgeStatus").classList.remove("show");
+}
+
+/* ================================================================
  * 启动
  * ================================================================ */
 loadState();
 switchTab(state.sideTab);
 bindEvents();
 renderAll();
+initFireflies();
+timeGreet();
 if(!state.chars.find(c => c.id === state.activeCharId)){
   state.activeCharId = null; state.activeSessionId = null;
   renderChat();
