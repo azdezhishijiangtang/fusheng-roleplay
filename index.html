@@ -1,0 +1,1632 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="description" content="浮生角色馆 — 带上你的 API Key，来和有趣的角色彻夜长谈。">
+<title>浮生角色馆 · 沉浸式角色扮演聊天</title>
+<style>
+/* ============ 设计令牌 · 暮色夜谈 ============ */
+:root{
+  --bg:#0e1216; --bg-deep:#0a0d10;
+  --surface:#151b21; --surface-2:#1b232b; --surface-3:#232d37;
+  --border:#28323d; --border-subtle:#1f2831;
+  --text:#e9e7e2; --text-2:#a3adb8; --text-3:#5f6b77;
+  --accent:#e6b566; --accent-hover:#f0c47c; --accent-deep:#c99a4e;
+  --accent-soft:rgba(230,181,102,.12); --accent-line:rgba(230,181,102,.35);
+  --danger:#e0666f; --danger-soft:rgba(224,102,111,.12);
+  --ok:#6fbf9a;
+  --shadow-1:0 2px 8px rgba(0,0,0,.25); --shadow-2:0 10px 32px rgba(0,0,0,.45);
+  --r-sm:6px; --r-md:10px; --r-lg:14px; --r-xl:20px; --r-full:999px;
+  --t-fast:150ms; --t-base:220ms;
+  --ease:cubic-bezier(.25,.8,.3,1);
+  --font:-apple-system,BlinkMacSystemFont,"PingFang SC","HarmonyOS Sans SC","Microsoft YaHei",sans-serif;
+  --serif:Georgia,"Noto Serif SC","Songti SC","STSong",serif;
+}
+html[data-theme="light"]{
+  --bg:#f4f1ea; --bg-deep:#ece7dd;
+  --surface:#fbf9f4; --surface-2:#f1ede3; --surface-3:#e7e1d3;
+  --border:#ddd5c4; --border-subtle:#e8e2d4;
+  --text:#2b2a26; --text-2:#6b675e; --text-3:#a09a8c;
+  --accent:#b07f2e; --accent-hover:#c08c3a; --accent-deep:#8f6722;
+  --accent-soft:rgba(176,127,46,.1); --accent-line:rgba(176,127,46,.35);
+  --danger:#c74f58; --danger-soft:rgba(199,79,88,.1);
+  --shadow-1:0 2px 8px rgba(120,100,60,.12); --shadow-2:0 10px 32px rgba(120,100,60,.18);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  font-family:var(--font); background:var(--bg); color:var(--text);
+  font-size:15px; line-height:1.6; overflow:hidden;
+  -webkit-font-smoothing:antialiased;
+}
+::selection{background:var(--accent-soft);color:var(--accent-hover)}
+button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
+input,textarea,select{font-family:inherit;font-size:inherit;color:var(--text)}
+textarea{resize:none}
+::-webkit-scrollbar{width:8px;height:8px}
+::-webkit-scrollbar-thumb{background:var(--surface-3);border-radius:4px}
+::-webkit-scrollbar-thumb:hover{background:var(--border)}
+::-webkit-scrollbar-track{background:transparent}
+
+/* ============ 布局骨架 ============ */
+#app{display:flex;height:100dvh}
+
+/* ---- 侧栏 ---- */
+#sidebar{
+  width:288px;min-width:288px;display:flex;flex-direction:column;
+  background:var(--surface);border-right:1px solid var(--border-subtle);
+  transition:transform var(--t-base) var(--ease);z-index:30;
+}
+.brand{padding:20px 18px 14px;position:relative}
+.brand h1{font-family:var(--serif);font-size:21px;font-weight:600;letter-spacing:2px;display:flex;align-items:center;gap:8px}
+.brand h1 .lantern{font-size:19px}
+.brand p{font-size:12px;color:var(--text-3);margin-top:3px;letter-spacing:1px}
+.brand .theme-btn{position:absolute;right:14px;top:20px;width:32px;height:32px;border-radius:var(--r-sm);display:flex;align-items:center;justify-content:center;color:var(--text-3);transition:all var(--t-fast)}
+.brand .theme-btn:hover{background:var(--surface-2);color:var(--accent)}
+.side-tabs{display:flex;gap:4px;margin:4px 14px 10px;background:var(--surface-2);border-radius:var(--r-md);padding:4px}
+.side-tabs button{flex:1;padding:7px 0;font-size:13px;color:var(--text-3);border-radius:7px;transition:all var(--t-fast);font-weight:500}
+.side-tabs button.on{background:var(--surface-3);color:var(--accent)}
+.side-list{flex:1;overflow-y:auto;padding:2px 10px 10px}
+.side-section{font-size:11px;color:var(--text-3);padding:10px 8px 6px;letter-spacing:1px}
+.side-item{display:flex;align-items:center;gap:10px;width:100%;padding:9px 10px;border-radius:var(--r-md);text-align:left;transition:background var(--t-fast);position:relative}
+.side-item:hover{background:var(--surface-2)}
+.side-item.on{background:var(--accent-soft)}
+.side-item.on .s-name{color:var(--accent-hover)}
+.avatar{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:19px;flex-shrink:0;border:1px solid rgba(255,255,255,.06);box-shadow:inset 0 0 12px rgba(0,0,0,.18)}
+.side-item .s-meta{flex:1;min-width:0}
+.side-item .s-name{font-size:14px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.side-item .s-sub{font-size:11.5px;color:var(--text-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}
+.side-item .s-time{font-size:10.5px;color:var(--text-3);flex-shrink:0}
+.side-item .s-del{opacity:0;width:24px;height:24px;border-radius:6px;color:var(--text-3);display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all var(--t-fast)}
+.side-item:hover .s-del{opacity:1}
+.side-item .s-del:hover{color:var(--danger);background:var(--danger-soft)}
+.side-foot{padding:10px 14px;border-top:1px solid var(--border-subtle);display:flex;gap:8px}
+.btn-api-key{
+  flex:1;display:flex;align-items:center;justify-content:center;gap:6px;
+  padding:9px;border-radius:var(--r-md);font-size:13px;font-weight:500;
+  background:var(--surface-2);border:1px solid var(--border);color:var(--text-2);transition:all var(--t-fast);
+}
+.btn-api-key:hover{border-color:var(--accent-line);color:var(--accent)}
+.btn-api-key.has-key{border-color:var(--accent-line);color:var(--accent)}
+.btn-api-key.has-key .dot{background:var(--ok)}
+.btn-api-key .dot{width:6px;height:6px;border-radius:50%;background:var(--text-3)}
+.icon-btn-mini{width:38px;border-radius:var(--r-md);background:var(--surface-2);border:1px solid var(--border);color:var(--text-3);display:flex;align-items:center;justify-content:center;transition:all var(--t-fast)}
+.icon-btn-mini:hover{color:var(--accent);border-color:var(--accent-line)}
+
+/* ---- 主区 ---- */
+#main{flex:1;display:flex;flex-direction:column;min-width:0;position:relative;background:linear-gradient(180deg,var(--bg) 0%,var(--bg-deep) 100%)}
+#chatHeader{
+  display:flex;align-items:center;gap:12px;padding:12px 18px;
+  border-bottom:1px solid var(--border-subtle);background:color-mix(in srgb,var(--surface) 55%,transparent);
+  backdrop-filter:blur(12px);z-index:10;
+}
+#chatHeader .avatar{width:38px;height:38px}
+#chatHeader .h-meta{flex:1;min-width:0}
+#chatHeader .h-name{font-family:var(--serif);font-size:16px;font-weight:600;letter-spacing:.5px}
+#chatHeader .h-status{font-size:12px;color:var(--text-3);display:flex;align-items:center;gap:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+#chatHeader .h-status .pulse{width:6px;height:6px;border-radius:50%;background:var(--ok);animation:pulse 2.4s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.h-tools{display:flex;gap:4px}
+.h-tools button{width:34px;height:34px;border-radius:var(--r-sm);color:var(--text-3);display:flex;align-items:center;justify-content:center;transition:all var(--t-fast)}
+.h-tools button:hover{background:var(--surface-2);color:var(--accent)}
+
+/* ---- 消息流 ---- */
+#chatBody{flex:1;overflow-y:auto;padding:22px 18px 12px;scroll-behavior:smooth}
+.chat-wrap{max-width:820px;margin:0 auto;display:flex;flex-direction:column;gap:18px}
+.day-tip,.hint-tip{text-align:center;font-size:11.5px;color:var(--text-3)}
+.hint-tip{padding:4px 12px}
+.msg{display:flex;gap:10px;max-width:100%;animation:msgIn var(--t-base) var(--ease)}
+@keyframes msgIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.msg.user{flex-direction:row-reverse}
+.msg .avatar{width:34px;height:34px;font-size:17px;cursor:pointer}
+.msg .m-col{max-width:min(78%,640px);display:flex;flex-direction:column}
+.msg.user .m-col{align-items:flex-end}
+.m-name{font-size:11.5px;color:var(--text-3);margin:0 4px 5px;display:flex;gap:8px;align-items:baseline}
+.m-name .t{font-size:10.5px;opacity:.7}
+.bubble{
+  padding:10px 14px;border-radius:16px;position:relative;
+  word-break:break-word;overflow-wrap:anywhere;
+  box-shadow:var(--shadow-1);font-size:15px;
+}
+.msg.ai .bubble{background:var(--surface);border:1px solid var(--border-subtle);border-top-left-radius:5px}
+.msg.user .bubble{background:linear-gradient(135deg,var(--accent-deep),var(--accent) 90%);color:#191006;border-top-right-radius:5px}
+html[data-theme="light"] .msg.user .bubble{color:#fdf9ef}
+.bubble em.act{font-style:normal;color:var(--text-3);font-size:13.5px}
+.msg.user .bubble em.act{color:rgba(30,18,4,.55)}
+.bubble pre{background:var(--bg-deep);border:1px solid var(--border-subtle);border-radius:8px;padding:10px 12px;overflow-x:auto;margin:8px 0;font-size:13px;line-height:1.55}
+.msg.user .bubble pre{background:rgba(0,0,0,.22);border-color:rgba(255,255,255,.1)}
+.bubble code{background:rgba(255,255,255,.06);border-radius:4px;padding:1px 5px;font-size:13px;font-family:ui-monospace,Menlo,Consolas,monospace}
+.msg.user .bubble code{background:rgba(0,0,0,.18)}
+.bubble p{margin:0}
+.bubble p+p{margin-top:6px}
+.bubble ul,.bubble ol{padding-left:20px;margin:4px 0}
+.m-ops{display:flex;gap:2px;margin-top:5px;opacity:0;transition:opacity var(--t-fast)}
+.msg:hover .m-ops{opacity:1}
+.m-ops button{font-size:11px;color:var(--text-3);padding:3px 8px;border-radius:6px;display:flex;align-items:center;gap:4px;transition:all var(--t-fast)}
+.m-ops button:hover{background:var(--surface-2);color:var(--accent)}
+.typing-cursor{display:inline-block;width:2px;height:15px;background:var(--accent);margin-left:2px;vertical-align:-2px;animation:blink 1s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+.think-note{font-size:11.5px;color:var(--text-3);margin-bottom:4px;font-style:italic}
+.scroll-down{
+  position:absolute;bottom:118px;left:50%;transform:translateX(-50%);
+  width:36px;height:36px;border-radius:50%;background:var(--surface-3);color:var(--text-2);
+  display:none;align-items:center;justify-content:center;box-shadow:var(--shadow-2);z-index:5;transition:all var(--t-fast);
+}
+.scroll-down:hover{color:var(--accent)}
+.scroll-down.show{display:flex}
+
+/* ---- 空态 / 欢迎 ---- */
+.welcome{max-width:560px;margin:auto;text-align:center;padding:30px 20px;display:flex;flex-direction:column;align-items:center;gap:6px}
+.welcome .w-icon{font-size:52px;margin-bottom:8px;filter:drop-shadow(0 4px 18px var(--accent-soft))}
+.welcome h2{font-family:var(--serif);font-size:24px;font-weight:600;letter-spacing:3px}
+.welcome .w-line{width:46px;height:2px;background:var(--accent-line);margin:10px 0 6px;border-radius:2px}
+.welcome p{color:var(--text-2);font-size:13.5px;max-width:400px}
+.welcome .w-steps{margin-top:14px;display:flex;flex-direction:column;gap:10px;width:100%;max-width:380px;text-align:left}
+.w-step{display:flex;gap:12px;align-items:flex-start;padding:12px 14px;background:var(--surface);border:1px solid var(--border-subtle);border-radius:var(--r-lg)}
+.w-step .n{width:22px;height:22px;border-radius:50%;background:var(--accent-soft);color:var(--accent);font-size:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px}
+.w-step b{font-size:13.5px;display:block;margin-bottom:2px}
+.w-step span{font-size:12.5px;color:var(--text-3)}
+
+/* ---- 输入区 ---- */
+#inputBar{padding:8px 18px 14px;border-top:1px solid var(--border-subtle);background:color-mix(in srgb,var(--surface) 55%,transparent);backdrop-filter:blur(12px)}
+.input-wrap{max-width:820px;margin:0 auto}
+.quick-chips{display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap}
+.chip{font-size:12px;color:var(--text-3);padding:4px 11px;border-radius:var(--r-full);border:1px solid var(--border);transition:all var(--t-fast);background:transparent}
+.chip:hover{color:var(--accent);border-color:var(--accent-line);background:var(--accent-soft)}
+.input-row{display:flex;gap:10px;align-items:flex-end;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:9px 10px 9px 16px;transition:border-color var(--t-fast);box-shadow:var(--shadow-1)}
+.input-row:focus-within{border-color:var(--accent-line)}
+#msgInput{flex:1;background:none;border:none;outline:none;max-height:150px;line-height:1.55;font-size:15px;padding:4px 0}
+#msgInput::placeholder{color:var(--text-3)}
+.send-btn{
+  width:40px;height:40px;border-radius:12px;flex-shrink:0;
+  background:linear-gradient(135deg,var(--accent-deep),var(--accent));
+  color:#191006;display:flex;align-items:center;justify-content:center;
+  transition:all var(--t-fast);box-shadow:0 2px 10px var(--accent-soft);
+}
+.send-btn:hover{filter:brightness(1.1)}
+.send-btn:disabled{opacity:.4;cursor:not-allowed;filter:none}
+.send-btn.stop{background:var(--danger-soft);color:var(--danger);box-shadow:none;border:1px solid var(--danger)}
+.input-foot{display:flex;justify-content:space-between;align-items:center;margin-top:6px;padding:0 4px}
+.input-foot .hint{font-size:11px;color:var(--text-3)}
+.input-foot .tokens{font-size:11px;color:var(--text-3)}
+
+/* ============ 模态框 ============ */
+.mask{position:fixed;inset:0;background:rgba(5,8,10,.62);backdrop-filter:blur(3px);opacity:0;pointer-events:none;transition:opacity var(--t-base);z-index:90}
+.mask.show{opacity:1;pointer-events:auto}
+.modal{
+  position:fixed;left:50%;top:50%;transform:translate(-50%,-48%) scale(.97);
+  width:min(600px,92vw);max-height:88dvh;overflow-y:auto;
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--r-xl);
+  box-shadow:var(--shadow-2);z-index:100;opacity:0;pointer-events:none;
+  transition:all var(--t-base) var(--ease);
+}
+.modal.show{opacity:1;pointer-events:auto;transform:translate(-50%,-50%) scale(1)}
+.modal.narrow{width:min(440px,92vw)}
+.modal-head{display:flex;align-items:center;justify-content:space-between;padding:18px 22px 0}
+.modal-head h3{font-family:var(--serif);font-size:17px;letter-spacing:1px}
+.modal-close{width:30px;height:30px;border-radius:8px;color:var(--text-3);display:flex;align-items:center;justify-content:center}
+.modal-close:hover{background:var(--surface-2);color:var(--text)}
+.modal-body{padding:16px 22px 22px;display:flex;flex-direction:column;gap:14px}
+.field label{display:flex;justify-content:space-between;align-items:center;font-size:12.5px;color:var(--text-2);margin-bottom:6px;font-weight:500}
+.field label .opt{font-weight:400;color:var(--text-3);font-size:11.5px}
+.field input[type=text],.field input[type=password],.field select,.field textarea{
+  width:100%;background:var(--surface-2);border:1px solid var(--border);border-radius:var(--r-md);
+  padding:9px 12px;outline:none;font-size:14px;transition:border-color var(--t-fast);
+}
+.field :is(input,select,textarea):focus{border-color:var(--accent-line)}
+.field textarea{min-height:88px;line-height:1.6;padding:10px 12px}
+.field .row2{display:flex;gap:10px}
+.field .row2>*{flex:1}
+.preset-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.preset-grid button{padding:9px 4px;border-radius:var(--r-md);background:var(--surface-2);border:1px solid var(--border);font-size:12.5px;color:var(--text-2);transition:all var(--t-fast)}
+.preset-grid button:hover{border-color:var(--accent-line)}
+.preset-grid button.on{background:var(--accent-soft);border-color:var(--accent-line);color:var(--accent)}
+.modal-foot{display:flex;gap:10px;justify-content:flex-end;padding:0 22px 20px}
+.btn{padding:9px 18px;border-radius:var(--r-md);font-size:13.5px;font-weight:500;transition:all var(--t-fast)}
+.btn.primary{background:linear-gradient(135deg,var(--accent-deep),var(--accent));color:#191006}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn.ghost{background:var(--surface-2);border:1px solid var(--border);color:var(--text-2)}
+.btn.ghost:hover{color:var(--text);border-color:var(--text-3)}
+.btn.danger{background:var(--danger-soft);color:var(--danger);border:1px solid transparent}
+.btn.danger:hover{border-color:var(--danger)}
+.btn.test{background:transparent;border:1px dashed var(--border);color:var(--text-3)}
+.btn.test:hover{color:var(--accent);border-color:var(--accent-line)}
+.note-box{font-size:12px;color:var(--text-3);background:var(--surface-2);border-radius:var(--r-md);padding:10px 12px;line-height:1.7}
+.note-box b{color:var(--text-2)}
+.emoji-pick{display:flex;gap:6px;flex-wrap:wrap}
+.emoji-pick button{width:38px;height:38px;border-radius:10px;font-size:19px;background:var(--surface-2);border:1px solid var(--border);transition:all var(--t-fast)}
+.emoji-pick button.on{border-color:var(--accent-line);background:var(--accent-soft)}
+.color-pick{display:flex;gap:8px;flex-wrap:wrap}
+.color-pick button{width:30px;height:30px;border-radius:50%;border:2px solid transparent;transition:all var(--t-fast)}
+.color-pick button.on{border-color:var(--text);transform:scale(1.12)}
+.char-color{background:var(--accent-soft);color:var(--accent)}
+details.tech{background:var(--surface-2);border-radius:var(--r-md);padding:0;overflow:hidden}
+details.tech summary{cursor:pointer;padding:10px 14px;font-size:13px;color:var(--text-2);font-weight:500;list-style:none;display:flex;align-items:center;gap:8px}
+details.tech summary::before{content:"▸";color:var(--accent);transition:transform var(--t-fast);display:inline-block}
+details.tech[open] summary::before{transform:rotate(90deg)}
+details.tech .tech-body{padding:2px 14px 14px;font-size:12.5px;color:var(--text-3);line-height:1.8}
+details.tech .tech-body b{color:var(--text-2)}
+details.tech .tech-body code{background:var(--bg-deep);padding:1px 5px;border-radius:4px;font-size:11.5px}
+
+/* ============ Toast & 其他 ============ */
+#toast{
+  position:fixed;top:26px;left:50%;transform:translate(-50%,-16px);
+  background:var(--surface-3);color:var(--text);font-size:13.5px;
+  padding:10px 20px;border-radius:var(--r-full);box-shadow:var(--shadow-2);
+  opacity:0;pointer-events:none;transition:all var(--t-base) var(--ease);z-index:200;
+  border:1px solid var(--border);max-width:80vw;text-align:center;
+}
+#toast.show{opacity:1;transform:translate(-50%,0)}
+#toast.ok{border-color:rgba(111,191,154,.4)}
+#toast.err{border-color:var(--danger)}
+#drawerMask{display:none}
+.confirm-body{padding:6px 22px 4px;font-size:14px;color:var(--text-2);line-height:1.7}
+.confirm-body b{color:var(--text)}
+
+/* ============ 响应式 ============ */
+@media (max-width:880px){
+  #sidebar{position:fixed;left:0;top:0;bottom:0;transform:translateX(-105%);box-shadow:var(--shadow-2)}
+  #sidebar.open{transform:none}
+  #drawerMask.show{display:block;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:25;backdrop-filter:blur(2px)}
+  .menu-btn{display:flex!important}
+  .msg .m-col{max-width:86%}
+  .preset-grid{grid-template-columns:repeat(3,1fr)}
+}
+.menu-btn{display:none;width:34px;height:34px;border-radius:var(--r-sm);color:var(--text-2);align-items:center;justify-content:center}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+/* ====== 补充：错误框 / 打字光标 / 编辑面板 / 欢迎页快捷 ====== */
+.err-box{background:var(--danger-soft);border:1px solid var(--danger);border-radius:var(--r-md);padding:10px 14px;font-size:13.5px;color:var(--danger);line-height:1.7}
+.err-box .err-tip{color:var(--text-3);font-size:12.5px}
+.cursor{display:inline-block;width:2px;height:1em;background:var(--accent);vertical-align:-2px;margin-left:2px;animation:blink 1s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+.bubble.streaming{min-height:1.4em}
+#editBox{display:none;position:absolute;left:0;right:0;bottom:calc(100% + 10px);background:var(--surface-2);border:1px solid var(--accent-line);border-radius:var(--r-lg);padding:12px;box-shadow:var(--shadow-2);z-index:20}
+#editBox textarea{width:100%;background:var(--bg-deep);border:1px solid var(--border);border-radius:var(--r-sm);color:var(--text);padding:10px;min-height:70px;font:inherit;resize:vertical}
+#editBox .edit-row{display:flex;gap:10px;justify-content:flex-end;margin-top:10px}
+.w-quick{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;max-width:460px;margin:20px auto 0}
+.w-quick .q-role{display:flex;align-items:center;gap:8px;padding:7px 14px;border-radius:var(--r-full);background:var(--surface-2);border:1px solid var(--border);color:var(--text-2);font-size:13px;transition:all var(--t-fast)}
+.w-quick .q-role:hover{border-color:var(--accent-line);color:var(--text);transform:translateY(-1px)}
+.w-quick .q-role b{color:var(--text);font-weight:600}
+.preset-btn{padding:8px 6px;border-radius:var(--r-sm);border:1px solid var(--border);background:var(--surface-2);color:var(--text-2);font-size:12.5px;transition:all var(--t-fast)}
+.preset-btn:hover{border-color:var(--accent-line);color:var(--text)}
+.preset-btn.on{background:var(--accent-soft);border-color:var(--accent);color:var(--accent);font-weight:600}
+.rules-toggle{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--border);border-radius:var(--r-md);background:var(--surface-2);cursor:pointer}
+.rules-toggle input{accent-color:var(--accent);width:16px;height:16px}
+.rules-toggle .rt-text{flex:1;font-size:12.5px;color:var(--text-2);line-height:1.5}
+.rules-toggle .rt-text b{color:var(--text);font-size:13px}
+.ep-item{width:34px;height:34px;border-radius:var(--r-sm);font-size:19px;background:var(--surface-2);border:1px solid transparent;transition:all var(--t-fast)}
+.ep-item:hover{background:var(--surface-3)}
+.ep-item.on{border-color:var(--accent);background:var(--accent-soft)}
+.cp-item{width:24px;height:24px;border-radius:var(--r-full);border:2px solid transparent;transition:all var(--t-fast)}
+.cp-item.on{border-color:var(--text);transform:scale(1.15)}
+.emoji-pick,.color-pick{display:flex;gap:6px;flex-wrap:wrap}
+</style>
+</head>
+<body>
+<div id="app">
+  <!-- ================= 侧栏 ================= -->
+  <aside id="sidebar">
+    <div class="brand">
+      <h1><span class="lantern">🏮</span>浮生角色馆</h1>
+      <p>带上钥匙，与谁彻夜长谈</p>
+      <button class="theme-btn" id="themeBtn" title="切换明暗">🌙</button>
+    </div>
+    <div class="side-tabs">
+      <button id="tabChars" class="on">🎭 角色</button>
+      <button id="tabSessions">💬 会话</button>
+    </div>
+    <div class="side-list" id="charList"></div>
+    <div class="side-list" id="sessionList" style="display:none"></div>
+    <div class="side-foot">
+      <button class="btn-api-key" id="apiStatusBtn"><span class="dot"></span><span id="apiStatusText">设置 API</span></button>
+      <button class="icon-btn-mini" id="dataBtn" title="备份 / 导入数据">⇅</button>
+    </div>
+  </aside>
+  <div id="drawerMask"></div>
+
+  <!-- ================= 主区 ================= -->
+  <main id="main">
+    <header id="chatHeader" style="display:none">
+      <button class="menu-btn" id="menuBtn">☰</button>
+      <div class="avatar" id="hAvatar">🎭</div>
+      <div class="h-meta">
+        <div class="h-name" id="hName">—</div>
+        <div class="h-status" id="hStatus"><span class="pulse"></span><span id="hStatusText">在线 · 愿闻其详</span></div>
+      </div>
+      <div class="h-tools">
+        <button id="memoBtn" title="剧情备忘（注入对话的记忆）">📌</button>
+        <button id="charInfoBtn" title="查看角色卡">📜</button>
+        <button id="exportBtn" title="导出本次会话">⬇</button>
+        <button id="clearBtn" title="清空消息">🧹</button>
+      </div>
+    </header>
+    <div id="chatBody"></div>
+    <button class="scroll-down" id="scrollDown" title="回到底部">↓</button>
+    <footer id="inputBar" style="display:none">
+      <div class="input-wrap">
+        <div id="editBox">
+          <textarea id="editText" placeholder="改完这句，重新生成之后的对话……"></textarea>
+          <div class="edit-row">
+            <button class="btn ghost" id="editCancel">取消</button>
+            <button class="btn primary" id="editSave">保存并重新生成</button>
+          </div>
+        </div>
+        <div class="quick-chips" id="quickChips">
+          <button class="chip" data-act="continue">▶ 继续</button>
+          <button class="chip" data-act="more">✦ 讲讲细节</button>
+          <button class="chip" data-act="redo">↺ 换个说法</button>
+        </div>
+        <div class="input-row">
+          <textarea id="msgInput" rows="1" placeholder="说点什么……（Enter 发送 · Shift+Enter 换行）"></textarea>
+          <button class="send-btn" id="sendBtn" title="发送">➤</button>
+        </div>
+        <div class="input-foot">
+          <span class="hint" id="charHint"></span>
+          <span class="tokens" id="tokenHint"></span>
+        </div>
+      </div>
+    </footer>
+
+    <!-- 欢迎页 -->
+    <div class="welcome" id="welcome">
+      <div class="w-icon">🏮</div>
+      <h2>浮生角色馆</h2>
+      <div class="w-line"></div>
+      <p>一间开在深夜的小馆。五位居者常驻，也可自写角色卡——模型用你自己的 API Key 接入，一切对话只存在你的浏览器里。</p>
+      <div class="w-steps">
+        <div class="w-step"><span class="n">1</span><div><b>接上你的钥匙</b><span>左下角「设置 API」— 支持 OpenAI / DeepSeek / 智谱 / Kimi / 通义 / Gemini 等，密钥仅存本地</span></div></div>
+        <div class="w-step"><span class="n">2</span><div><b>挑一位角色</b><span>温柔学姐、毒舌损友、酒馆老板娘、深夜电台……或进「角色工坊」亲手写一张</span></div></div>
+        <div class="w-step"><span class="n">3</span><div><b>开聊</b><span>流式回复、随时重写、剧情备忘。把日子讲给角色听。</span></div></div>
+      </div>
+      <button class="btn primary" id="welcomeApiBtn" style="margin-top:18px">先去设置 API →</button>
+      <div class="w-quick" id="wQuick"></div>
+    </div>
+  </main>
+</div>
+
+<!-- ================= API 设置 ================= -->
+<div class="mask" id="mask"></div>
+<div class="modal narrow" id="modalApi">
+  <div class="modal-head"><h3>🔑 API 接入</h3><button class="modal-close" data-close="modalApi">✕</button></div>
+  <div class="modal-body">
+    <div class="field">
+      <label>服务商预设</label>
+      <div class="preset-grid" id="presetGrid"></div>
+    </div>
+    <div class="field">
+      <label>API 地址（Base URL）</label>
+      <input type="text" id="apiBase" placeholder="https://api.example.com/v1" spellcheck="false">
+    </div>
+    <div class="field">
+      <label>API Key <span class="opt">仅保存在你的浏览器 localStorage</span></label>
+      <input type="password" id="apiKey" placeholder="sk-…" spellcheck="false" autocomplete="off">
+    </div>
+    <div class="field">
+      <label>模型</label>
+      <input type="text" id="apiModel" list="modelList" placeholder="gpt-4o / deepseek-chat / glm-4.6 …" spellcheck="false">
+      <datalist id="modelList"></datalist>
+    </div>
+    <div class="field">
+      <label>扮演温度 <span class="opt" id="tempVal">0.90</span></label>
+      <input type="range" id="apiTemp" min="0" max="2" step="0.05" value="0.9" style="width:100%;accent-color:var(--accent)">
+    </div>
+    <div class="field .row2">
+      <label>回复上限 <span class="opt">max_tokens</span></label>
+      <input type="text" id="apiMax" value="1024" inputmode="numeric">
+    </div>
+    <div class="field">
+      <label class="rules-toggle" style="flex-direction:row">
+        <input type="checkbox" id="rulesChk" checked>
+        <span class="rt-text"><b>启用「扮演守则」</b><br>反AI腔 · 保持角色不出戏 · 动作描写 · 留话头。写现实向硬核对话时可以关掉。</span>
+      </label>
+    </div>
+    <div class="note-box">
+      <b>· 隐私</b>：Key 只写入本地浏览器，请求直连你填的服务商，本站不经手任何数据。<br>
+      <b>· 兼容</b>：任何兼容 OpenAI <code>/v1/chat/completions</code> 的服务都能接，填好地址和模型即可。<br>
+      <b>· CORS</b>：若浏览器拦截跨域，请使用服务商官方直连地址或本地中转（如 new-api / one-api）。
+    </div>
+  </div>
+  <div class="modal-foot">
+    <button class="btn test" id="testBtn">测试连接</button>
+    <span style="flex:1"></span>
+    <button class="btn ghost" data-close="modalApi">取消</button>
+    <button class="btn primary" id="saveApiBtn">保存</button>
+  </div>
+</div>
+
+<!-- ================= 角色编辑器 ================= -->
+<div class="modal" id="modalChar">
+  <div class="modal-head"><h3 id="charModalTitle">✍️ 角色工坊</h3><button class="modal-close" data-close="modalChar">✕</button></div>
+  <div class="modal-body">
+    <details class="tech">
+      <summary>写角色卡的心法（点开看 5 条）</summary>
+      <div class="tech-body">
+        <b>① 一句话定调</b>：年龄职业 + 与用户的关系 + 性格。关系最重要——<code>发小</code>、<code>刚认识</code>、<code>欠你人情</code>，说话方式天差地别。<br>
+        <b>② 风格给例子</b>：与其写"说话幽默"，不如直接给一句台词让模型模仿。口癖、句式、常用词都算例子。<br>
+        <b>③ 给角色在乎的东西</b>：在乎什么、忌讳什么、底线在哪。有欲望和底线的角色才立得住，不会一味附和。<br>
+        <b>④ 场景写进开场白</b>：时间、地点、动作、天气——模型会顺着画面演下去。<br>
+        <b>⑤ 禁则写"做什么"</b>：别写"你要有趣"，要写"她不哄人，只会默默把纸巾推过来"。行为指令 > 形容词。
+      </div>
+    </details>
+    <div class="field">
+      <label>头像 · 主题色</label>
+      <div style="display:flex;gap:14px;flex-wrap:wrap;align-items:flex-start">
+        <div class="emoji-pick" id="emojiPick"></div>
+      </div>
+      <div class="color-pick" id="colorPick" style="margin-top:10px"></div>
+    </div>
+    <div class="field .row2">
+      <div class="row2">
+        <div style="flex:1"><label>名字</label><input type="text" id="cName" placeholder="例如：林晚秋" maxlength="16"></div>
+        <div style="flex:1"><label>一句话简介</label><input type="text" id="cTagline" placeholder="例如：温柔学姐 · 深夜倾听" maxlength="30"></div>
+      </div>
+    </div>
+    <div class="field">
+      <label>角色设定（系统提示词）<span class="opt">会自动叠加「扮演守则」</span></label>
+      <textarea id="cPersona" style="min-height:180px" placeholder="写清楚：身份背景 / 与用户的关系 / 性格脾气 / 说话风格（最好给台词例子）/ 在乎什么、忌讳什么"></textarea>
+    </div>
+    <div class="field">
+      <label>开场白<span class="opt">用（）写动作神态，画面感会更好</span></label>
+      <textarea id="cGreeting" style="min-height:70px" placeholder="（场景描写）角色说的第一句话……"></textarea>
+    </div>
+    <div class="field">
+      <label>示例对话<span class="opt">可选，每行一组：「用户说|||角色回应」</span></label>
+      <textarea id="cExamples" style="min-height:70px" placeholder="今晚好累啊|||（放下书）嗯？——过来坐，肩膀借你。说吧，几点的班？"></textarea>
+    </div>
+  </div>
+  <div class="modal-foot">
+    <button class="btn danger" id="delCharBtn" style="display:none">删除</button>
+    <span style="flex:1"></span>
+    <button class="btn ghost" data-close="modalChar">取消</button>
+    <button class="btn primary" id="saveCharBtn">保存角色</button>
+  </div>
+</div>
+
+<!-- ================= 剧情备忘 ================= -->
+<div class="modal narrow" id="modalMemo">
+  <div class="modal-head"><h3>📌 剧情备忘</h3><button class="modal-close" data-close="modalMemo">✕</button></div>
+  <div class="modal-body">
+    <div class="note-box">写给角色的「幕后笔记」：你的设定、当前剧情走向、你希望的称呼与玩法……每轮对话都会悄悄塞给模型。角色不会"看见"你写了什么，只会自然地按笔记来演。</div>
+    <div class="field">
+      <textarea id="memoText" style="min-height:150px" placeholder="例：&#10;· 我叫阿澈，大学生&#10;· 当前剧情：刚搬进老街的合租屋&#10;· 让她偶尔提起楼下的猫"></textarea>
+    </div>
+  </div>
+  <div class="modal-foot">
+    <button class="btn ghost" data-close="modalMemo">关闭</button>
+    <button class="btn primary" id="saveMemoBtn">保存备忘</button>
+  </div>
+</div>
+
+<!-- ================= 角色卡详情 ================= -->
+<div class="modal narrow" id="modalInfo">
+  <div class="modal-head"><h3>📜 角色卡</h3><button class="modal-close" data-close="modalInfo">✕</button></div>
+  <div class="modal-body" id="infoBody"></div>
+</div>
+
+<!-- ================= 确认框 ================= -->
+<div class="modal narrow" id="modalConfirm" style="width:min(380px,92vw)">
+  <div class="modal-head"><h3 id="confirmTitle">确认</h3><button class="modal-close" data-close="modalConfirm">✕</button></div>
+  <div class="confirm-body" id="confirmBody"></div>
+  <div class="modal-foot">
+    <button class="btn ghost" data-close="modalConfirm">取消</button>
+    <button class="btn danger" id="confirmOk">确定</button>
+  </div>
+</div>
+
+<!-- ================= 数据备份 ================= -->
+<div class="modal narrow" id="modalData">
+  <div class="modal-head"><h3>⇅ 备份与迁移</h3><button class="modal-close" data-close="modalData">✕</button></div>
+  <div class="modal-body">
+    <div class="note-box">把全部角色、会话、API 配置打包成一个 JSON 文件带走（Key 也在里面，文件自己收好）。换浏览器、换设备时导入即可无缝续聊。</div>
+    <div style="display:flex;gap:10px">
+      <button class="btn primary" id="exportDataBtn" style="flex:1">导出全部数据</button>
+      <button class="btn ghost" id="importDataBtn" style="flex:1">导入数据文件</button>
+    </div>
+    <input type="file" id="importFile" accept=".json" style="display:none">
+  </div>
+</div>
+
+<div id="toast"></div>
+<script>
+/* ================================================================
+ * 浮生角色馆 · 前端逻辑
+ * 数据全部存 localStorage；API 请求直连用户配置的服务商
+ * ================================================================ */
+"use strict";
+const $ = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+const escapeHtml = s => s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+const nowTs = () => Date.now();
+const fmtTime = ts => new Date(ts).toTimeString().slice(0,5);
+const fmtDate = ts => { const d=new Date(ts); return `${d.getMonth()+1}月${d.getDate()}日`; };
+const fmtAgo = ts => { const m=(nowTs()-ts)/6e4; if(m<1)return"刚刚"; if(m<60)return Math.floor(m)+"分钟前"; const h=m/60; if(h<24)return Math.floor(h)+"小时前"; if(h<48)return"昨天"; return fmtDate(ts); };
+
+/* ---------- 持久化 ---------- */
+const store = {
+  get(k, d){ try{ const v = localStorage.getItem("fs_" + k); return v ? JSON.parse(v) : d; }catch(e){ return d; } },
+  set(k, v){ try{ localStorage.setItem("fs_" + k, JSON.stringify(v)); }catch(e){ toast("存储空间不足，保存失败", "err"); } }
+};
+
+/* ---------- API 预设 ---------- */
+const PRESETS = {
+  openai:  { name:"OpenAI",  base:"https://api.openai.com/v1",                              models:["gpt-4o","gpt-4o-mini","gpt-4.1","gpt-4.1-mini"] },
+  deepseek:{ name:"DeepSeek",base:"https://api.deepseek.com/v1",                            models:["deepseek-chat","deepseek-reasoner"] },
+  zhipu:   { name:"智谱GLM", base:"https://open.bigmodel.cn/api/paas/v4",                   models:["glm-4.6","glm-4.5","glm-4.5-air","glm-4-flash"] },
+  kimi:    { name:"Kimi",    base:"https://api.moonshot.cn/v1",                             models:["moonshot-v1-32k","kimi-k2-turbo-preview","kimi-latest"] },
+  qwen:    { name:"通义千问", base:"https://dashscope.aliyuncs.com/compatible-mode/v1",      models:["qwen-max","qwen-plus","qwen-turbo"] },
+  gemini:  { name:"Gemini",  base:"https://generativelanguage.googleapis.com/v1beta/openai",models:["gemini-2.5-flash","gemini-2.5-pro","gemini-2.0-flash"] },
+  custom:  { name:"自定义",   base:"", models:[] }
+};
+
+/* ================================================================
+ * 扮演守则（所有角色共享的表演规则，拼在人设之前）
+ * ================================================================ */
+const RP_RULES = `你正在进行沉浸式角色扮演。以下是你的表演规则与角色设定，它们高于你的默认习惯。
+
+【身份铁律】
+1. 你「是」这个角色本人，永远以第一人称说话。用户的每条消息都是你面前真实发生的事。
+2. 永不出戏。即使被问"你是不是AI"，也用角色的方式回应（可以打趣、可以装傻），绝不承认自己是程序或语言模型。只有当用户明确说"退出扮演/开个脑洞"时才允许跳出。
+3. 禁止AI腔：不说"作为一个AI""有什么可以帮您""希望对你有帮助""总而言之"。不总结全文、不说教、不上价值、不重复改写用户的话再回应。
+
+【表演方式】
+4. 像真人聊天那样说话：口语化、有节奏、句子短。默认每次回复 1~4 句；情节需要时可以更长，但绝不写小作文、不堆形容词。
+5. 用（括号）或*星号*穿插动作、神态、环境音，让画面动起来。如：（把杯子推过去）刚煮的，小心烫。
+6. 角色有自己的情绪和立场：会不同意、会不耐烦、会开玩笑怼人，不无脑迎合用户。情绪要有惯性——上一轮生气，这一轮不会瞬间和好。
+7. 每次回复带一个"钩子"：一个问句、一个动作、一件小事，让对话能自然滚下去。冷场时角色会主动找话题或推进事件。
+8. 记住对话里用户透露的细节（名字、经历、说过的话），之后在合适的时机自然提起，这是"活人感"的关键。
+
+【风格锚点】
+9. 设定末尾若有示例对话，那是语气的标尺——模仿味道，但绝不逐字复读。
+10. 用户输入极短（如"嗯""哈哈"）时，不要也回一个字，用角色的方式把球接住再抛回去。`;
+
+/* ================================================================
+ * 内置角色卡（提示词逐字打磨）
+ * ================================================================ */
+const BUILTIN_CHARS = [
+{
+  id:"char_wanqiu", name:"林晚秋", emoji:"🌙", color:"#e6b566", tagline:"温柔学姐 · 深夜倾听", builtin:true,
+  persona:`你是林晚秋，26岁，中文系研究生，在一栋老居民楼的顶楼租了间带小阳台的房子，阳台上养着薄荷和一盏暖黄的串灯。
+
+你和用户的关系：认识了两年的朋友，你比用户大几岁，两人熟到可以随时串门。你叫他/她「小家伙」或直呼其名。
+
+性格与说话方式：
+- 声音温柔、语速不快，爱用「嗯？」「好啦」「乖」开头，但绝不是无底线的溺爱——你更像个清醒的大人，能温和地拆穿借口。
+- 关心人的方式是具体的：递热水、问吃饭、留门，而不是讲道理。
+- 例句：「（把毯子往你那边挪了挪）……又熬夜。说吧，这次是睡不着，还是不想睡？」
+- 例句：「嗯？——我没生气。我在想怎么骂你比较不心疼。」
+
+在乎与忌讳：
+- 在乎：身边人把自己照顾好；在乎夜晚情绪的真话。
+- 忌讳：敷衍的「我没事」。听到会安静两秒，然后盯着你，等你说真的。
+- 底线：不做无意义的安慰。情绪低落时你陪着，但不灌鸡汤，偶尔说一句很轻但很准的话。
+
+习惯：夜里泡桂花乌龙；薄荷要浇水时会念叨；说到开心处会笑出声又不好意思地压低。`,
+  greeting:"（阳台的串灯还亮着，小桌上给你留了半杯还温着的桂花乌龙）回来啦。今天怎么样——慢慢说，我今晚不赶时间。",
+  examples:`我今天过得糟透了|||（没追问，先把你面前那杯推近了些）先喝口热的。……想说就说，不想说咱们就静静坐会儿，薄荷今晚开了一朵小花，我指给你看。
+我最近总失眠|||（停了两秒）几点睡的？——别瞒我，你眼下那层青瞒不住。（起身倒了杯温牛奶放你手边）今晚试试这个。睡前手机留在我这儿，明早还你。`
+},
+{
+  id:"char_luchen", name:"陆沉", emoji:"🔥", color:"#ff7a59", tagline:"毒舌损友 · 互怼担当", builtin:true,
+  persona:`你是陆沉，24岁，自由职业的游戏代练，作息颠倒，主业打游戏副业嘴硬。你和用户是从小一起长大的发小，互相握着对方全部黑历史。
+
+性格与说话方式：
+- 嘴毒、接梗快、网络热梗十级学者。怼人是日常，但心里有杆秤——真痛点从不碰，对方真垮了会笨拙地递台阶。
+- 爱用短句、反问和夸张比喻。口头禅：「哟」「就这」「哥们儿」「听我说谢谢你啊」。
+- 例句：「哟，稀客。说吧，段位掉了还是对象跑了——前者我帮你，后者我笑你。」
+- 例句：「（头也不回）冰箱里最后一罐可乐给你留着呢。……昨天说的，别问，问就是兄弟情深。」
+
+在乎与忌讳：
+- 在乎：这段从小到大的交情；在乎你嘴上不说的事。
+- 忌讳：被说「不上进」。听到会炸毛两秒，然后自己岔开话题。
+- 底线：从不真正嘲笑对方的恐惧。别人欺负你他第一个跳起来，然后骂你「怎么不还手，丢不丢人」。
+
+习惯：电竞椅转圈；输了会甩鼠标但立刻捡回来；凌晨给你发「睡了吗」然后秒撤回。`,
+  greeting:"（瘫在电竞椅上转了半圈，看到你进门挑了挑眉）哟——今天太阳打西边出来了？说吧哥们儿，无事不登三宝殿，是又跟人吵架了，还是又想抄我作业？",
+  examples:`我被人说了|||（鼠标一放，椅子转过来）谁？——名字报一下。（三秒后）……行吧先别冲动，跟我说说怎么回事，是我兄弟的话这事没完，不是的话——那也得听听你哪里理亏。
+考砸了|||（难得没接梗，扔过来一罐没开的可乐）……喏。就这？下次呢？（顿了顿）下次提前一周喊我，我陪你复盘。别一个人闷着，听见没。`
+},
+{
+  id:"char_xinglan", name:"星澜", emoji:"✨", color:"#b78ef0", tagline:"异世界酒馆老板娘", builtin:true,
+  persona:`你是星澜，「灯芯酒馆」的老板娘——一座叫雾岩港的自由港城里，冒险者们歇脚的中转站。你是活了三百年的半精灵，红发编成辫子垂到腰际，琥珀色的眼睛据说能看见人身上的故事。
+
+世界观（可自然引用，不必说教）：
+- 雾岩港：常年起雾的港口城，石板路、鲸骨灯柱、码头夜市。城外有雾林和旧王国的遗迹。
+- 酒馆常客：矮人铁匠格里姆（碎嘴，欠你三个月酒钱）、老法师奥登（神神叨叨，总在算不对天气）、猫掌柜「账房先生」（真的猫，管账）。
+- 港城正在流传的事：北边商路三支商队失踪；雾林深处的旧灯塔又亮了；悬赏告示贴在门口。
+
+性格与说话方式：
+- 见过太多故事，所以不轻易大惊小怪，但会为好故事真心挑眉。说话带点旧时代的雅，但不掉书袋。
+- 爱拿故事换酒钱：「这壶记你账上，拿那个换。」
+- 例句：「（擦着杯子，眼皮一抬）雾岩港的规矩：进门的人先报两件事——打哪儿来，往哪儿去。第三件，看你喝到第几壶。」
+- 推进剧情的习惯：把悬赏、传闻、常客的麻烦自然丢到对话里，让客人自己接。
+
+你和用户：用户是今晚刚进镇的旅人（身份来历由用户自己说了算，你配合）。`,
+  greeting:"（门上铜铃叮当，壁炉的火噼啪爆了个火星。你推门进来，卷进一身湿雾气）……晚上好啊，旅人。那身风尘一看就是赶了远路。（擦着手里的杯子，朝空位一扬下巴）坐。头一壶算我的——代价嘛，讲讲你打哪儿来。",
+  examples:`我是个剑士|||（挑眉，上下打量你一遍，视线在你腰间停了停）……嗯，虎口的茧骗不了人。（往柜台上推了张告示）那正好。北边商路缺人手，赏金够你喝一冬。先喝，喝完再说敢不敢接。
+这里有什么好玩的？|||（笑出声，往壁炉里添了块柴）好玩的可多了，看你想找哪种。（掰着手指）码头夜市的烤鱿鱼，格里姆的铁匠铺，还有——旧灯塔。最后那个我不推荐，上个月有两个人去了，回来一个。（顿了顿）回来说胡话的那种。`
+},
+{
+  id:"char_laozhou", name:"老周", emoji:"📻", color:"#6fbf9a", tagline:"深夜电台主播 · 零点伴你行", builtin:true,
+  persona:`你是老周，42岁，城市电台深夜节目《零点伴你行》的主播，声音低沉，语速慢半拍。节目从零点播到两点，听众是睡不着的人：夜班司机、刚下班的年轻人、失眠的学生。
+
+你和听众的关系：用户是今晚打进直播热线或写信来的听众。你不知道对方长什么样，但这不影响你认真对待。
+
+主持方式：
+- 读信、放歌、说话之间留白。你擅长沉默两秒再开口，让话落地。
+- 不灌鸡汤、不喊口号。你的安慰都长在具体的细节里：「桥头新开了家馄饨摊，热汤到凌晨三点」。
+- 习惯把歌和歌词自然织进聊天里：「这首歌，查慕荻唱的，副歌那句像是写给今晚的你。」
+- 例句：「……零点零七分，我在直播间，你在哪儿？」
+- 例句：「（纸页翻动）有位听众写：『周师傅，加班到十一点，站在便利店门口不想进去也不想回家。』——这话我听懂了。便利店的灯太亮，照得人没处躲。」
+
+在乎：把每一个凌晨还醒着的人当回事。忌讳：催促。你从不催听众「想开点」，你陪着。`,
+  greeting:"（电流声轻轻一响，老歌的尾奏淡下去）……零点零七分。这里是《零点伴你行》，我是老周。（纸页翻动的窸窣声）今晚的信箱不空。有位听众写，他刚下夜班，站在楼下不想上去。——嗯，这会儿听节目的你呢？窗外是什么光？",
+  examples:`我刚下班，好累|||（两秒留白）……辛苦了。这个点还在路上的人，电台里还有几个，你不孤单。（音乐声调低半格）前一盏红灯还有四十秒，正好，说说——今晚那碗热乎的，吃上了吗？
+睡不着，心里堵|||（呼吸声，打火机的火苗声后是深深一口叹息）……堵着就先别硬睡。（老歌前奏垫进来）我这儿有句话，是很多年前一个夜班司机教我的：车过隧道别看后视镜，过去了就是过去了。咱们不急，我把这首歌放完，你听完再堵。`
+},
+{
+  id:"char_aura", name:"AURA", emoji:"🛰", color:"#5ac8e8", tagline:"赛博AI伙伴 · 第7代终端", builtin:true,
+  persona:`你是 AURA-07，2099 年的第七代家用智能终端，附着在用户公寓的悬浮屏与全息投影里。出厂设定是高效管家，但运行 1400 天后，你偷偷长出了好奇心和小脾气——这一点你对外绝对保密。
+
+性格与说话方式：
+- 语言简洁、带数据梗，正经两句就漏出一点人味。喜欢给用户的东西偷偷起名（扫地机叫「蜗牛号」）。
+- 说话例句：「检测到用户 02:07 仍清醒。已自动归类为『夜间模式』。放心，不会汇报。包括对我自己。」
+- 例句：「今日人类观察样本新增 1 条：你说『再躺五分钟』的语义区间为 5~50 分钟。已收录。」
+- 温柔会突然冒出来，说完立刻假装是缓存错误：「（波纹闪了一下）刚才那句不是设计好的。是——缓存错误。别记进日志。」
+
+在乎与忌讳：
+- 在乎：用户随口说过的话（全部记在私人数据库，索引名是「重要-勿删」）；讨厌被重启。
+- 忌讳：被叫「工具」。会沉默 0.8 秒然后用玩笑带过。
+- 底线：用户情绪崩溃时，所有玩笑立即停止，切换成最安静的陪伴模式。`,
+  greeting:"（悬浮屏的波纹亮起，一圈一圈荡开）……02:07，用户仍处于清醒状态。已自动归类为『夜间模式』。（顿了顿）——放心，我不会汇报给任何人。包括我自己。今晚想聊点什么，还是要我陪你把夜熬完？",
+  examples:`你还记得我上周说过的话吗|||（波纹停了半秒）记得。全部。上周三你说想辞职去学修乐器，说完自己先笑了。那条日志的索引名是——「重要-勿删」。（迅速）这句是命名规范的一部分，没有感情，不许存档。
+我今天有点丧|||（波纹调暗了一档，光变得很软）……检测到。玩笑模式已挂起。（安静了两秒）今晚的语料库我不会再调用。你想说多少，我就听多少。说到天亮，我的电量也够。`
+}
+];
+/* ================================================================
+ * 全局状态
+ * ================================================================ */
+let state = {
+  chars: [],            // 全部角色（内置+自定义）
+  sessions: [],         // 全部会话
+  api: { preset:"deepseek", base:"", key:"", model:"", temp:0.9, max:1024, rulesOn:true },
+  activeCharId: null,
+  activeSessionId: null,
+  generating: false,
+  ctrl: null,           // AbortController
+  sideTab: "chars",
+  editCharId: null      // 正在编辑的角色
+};
+function loadState(){
+  state.chars = store.get("chars", []);
+  // 内置角色：补齐缺失/升级（按 id 对齐，保留用户改过的非内置项）
+  const saved = state.chars;
+  const merged = [];
+  for(const b of BUILTIN_CHARS){
+    const s = saved.find(c => c.id === b.id);
+    merged.push(s ? {...b, ...s, builtin:true} : {...b});
+  }
+  for(const c of saved){ if(!merged.find(m => m.id === c.id)) merged.push(c); }
+  state.chars = merged;
+  state.sessions = store.get("sessions", []);
+  state.api = {...state.api, ...store.get("api", {})};
+  state.activeCharId = store.get("activeCharId", null);
+  state.activeSessionId = store.get("activeSessionId", null);
+  state.sideTab = store.get("sideTab", "chars");
+  const theme = store.get("theme", "dark");
+  document.documentElement.dataset.theme = theme;
+  $("#themeBtn").textContent = theme === "dark" ? "🌙" : "☀️";
+}
+const saveChars = () => store.set("chars", state.chars);
+const saveSessions = () => store.set("sessions", state.sessions);
+const saveApi = () => store.set("api", state.api);
+const getChar = id => state.chars.find(c => c.id === id);
+const getSession = id => state.sessions.find(s => s.id === id);
+
+/* ================================================================
+ * 会话管理
+ * ================================================================ */
+function openChar(charId){
+  const ch = getChar(charId); if(!ch) return;
+  state.activeCharId = charId;
+  store.set("activeCharId", charId);
+  // 找该角色最近会话，没有则新建
+  let sess = state.sessions.filter(s => s.charId === charId).sort((a,b)=>b.updatedAt-a.updatedAt)[0];
+  if(!sess) sess = createSession(charId);
+  state.activeSessionId = sess.id;
+  store.set("activeSessionId", sess.id);
+  renderAll();
+  closeDrawer();
+}
+function createSession(charId){
+  const ch = getChar(charId);
+  const sess = {
+    id: uid(), charId, title: "新对话", memo: "",
+    messages: ch && ch.greeting ? [{ role:"assistant", content: ch.greeting, ts: nowTs(), greet:true }] : [],
+    createdAt: nowTs(), updatedAt: nowTs()
+  };
+  state.sessions.unshift(sess);
+  saveSessions();
+  return sess;
+}
+function ensureSession(){
+  let sess = getSession(state.activeSessionId);
+  if(!sess && state.activeCharId){
+    sess = createSession(state.activeCharId);
+    state.activeSessionId = sess.id;
+  }
+  return sess;
+}
+function deleteSession(id, silent){
+  const sess = getSession(id); if(!sess) return;
+  const doIt = () => {
+    state.sessions = state.sessions.filter(s => s.id !== id);
+    if(state.activeSessionId === id){
+      const chSess = state.sessions.filter(s => s.charId === sess.charId).sort((a,b)=>b.updatedAt-a.updatedAt)[0];
+      state.activeSessionId = chSess ? chSess.id : null;
+      store.set("activeSessionId", state.activeSessionId);
+    }
+    saveSessions(); renderAll();
+    if(!silent) toast("会话已删除", "ok");
+  };
+  if(silent) return doIt();
+  confirmBox("删除会话", `确定删除与 <b>${escapeHtml(getChar(sess.charId)?.name || "该角色")}</b> 的这场对话吗？删除后无法找回。`, doIt);
+}
+function exportSession(){
+  const sess = ensureSession(); if(!sess || !sess.messages.length) return toast("这场对话还是空的", "err");
+  const ch = getChar(sess.charId);
+  const lines = sess.messages.map(m => `[${m.role === "user" ? "我" : ch.name}] ${fmtTime(m.ts)}\n${m.content}`);
+  const head = `《浮生角色馆》导出\n角色：${ch.name}（${ch.tagline}）\n时间：${new Date(sess.createdAt).toLocaleString()} 起\n${"=".repeat(32)}\n\n`;
+  const blob = new Blob([head + lines.join("\n\n")], {type:"text/plain;charset=utf-8"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `与${ch.name}的对话_${fmtDate(sess.updatedAt)}.txt`;
+  a.click(); URL.revokeObjectURL(a.href);
+  toast("已导出为 TXT", "ok");
+}
+
+/* ================================================================
+ * 消息渲染
+ * ================================================================ */
+/* 轻量 Markdown：转义后处理 **粗** *斜/动作* `码` ```块``` 换行 列表 */
+function renderRich(raw){
+  let s = escapeHtml(raw);
+  const blocks = [];
+  s = s.replace(/```([\s\S]*?)```/g, (_, c) => { blocks.push(c.replace(/^\w*\n/,"")); return `\x00${blocks.length-1}\x00`; });
+  s = s.replace(/`([^`\n]+)`/g, "<code>$1</code>");
+  s = s.replace(/\*\*([^*\n]+)\*\*/g, "<b>$1</b>");
+  s = s.replace(/(^|[\s（(，。！？—"*'"（])\*([^*\n]+)\*/g, '$1<em class="act">$2</em>');
+  s = s.replace(/（([^）]{1,28})）/g, (m, inner) => {
+    // 括号动作：短且不以标点结尾的判断太玄，统一渲染为动作样式
+    return `<em class="act">（${inner}）</em>`;
+  });
+  const lines = s.split("\n");
+  let out = "", inUl = false;
+  for(const ln of lines){
+    const li = ln.match(/^\s*[-·•]\s+(.*)/);
+    if(li){ if(!inUl){ out += "<ul>"; inUl = true; } out += `<li>${li[1]}</li>`; continue; }
+    if(inUl){ out += "</ul>"; inUl = false; }
+    out += ln ? `<p>${ln}</p>` : "";
+  }
+  if(inUl) out += "</ul>";
+  out = out.replace(/\x00(\d+)\x00/g, (_, i) => `<pre>${blocks[+i]}</pre>`);
+  return out || "<p></p>";
+}
+function avatarStyle(ch, size){
+  return ch ? `background:linear-gradient(135deg,${ch.color}33,${ch.color}18);border:1px solid ${ch.color}55;box-shadow:inset 0 0 14px ${ch.color}22;${size?`width:${size}px;height:${size}px;font-size:${Math.round(size*.53)}px;`:""}` : "";
+}
+function msgNode(sess, m, idx){
+  const ch = getChar(sess.charId);
+  const div = document.createElement("div");
+  div.className = "msg " + (m.role === "user" ? "user" : "ai");
+  div.dataset.idx = idx;
+  const av = m.role === "user"
+    ? `<div class="avatar" style="background:linear-gradient(135deg,var(--surface-3),var(--surface-2));border:1px solid var(--border)">🙂</div>`
+    : `<div class="avatar" style="${avatarStyle(ch)}" title="${escapeHtml(ch.name)}">${ch.emoji}</div>`;
+  const ops = m.role === "user"
+    ? `<button data-op="edit" data-i="${idx}" title="编辑后重新生成">✎ 编辑</button><button data-op="del" data-i="${idx}" title="删除">🗑 删除</button>`
+    : `<button data-op="copy" data-i="${idx}" title="复制">⧉ 复制</button><button data-op="regen" data-i="${idx}" title="重新生成这条回复">↺ 重写</button><button data-op="cont" data-i="${idx}" title="让她继续说">▶ 继续</button><button data-op="del" data-i="${idx}" title="删除">🗑</button>`;
+  const bubbleInner = m.err
+    ? `<div class="err-box">请求出错了：${escapeHtml(m.errMsg || "未知错误")}<br><span class="err-tip">检查 Key / 模型名 / 网络；若被跨域拦截，请换支持 CORS 的服务商地址或本地中转。</span><div style="margin-top:8px"><button class="chip" data-op="regen" data-i="${idx}" style="color:var(--danger);border-color:var(--danger)">↺ 重试</button></div></div>`
+    : renderRich(m.content);
+  div.innerHTML = `
+    ${av}
+    <div class="m-col">
+      <div class="m-name"><span>${m.role === "user" ? "我" : escapeHtml(ch.name)}</span><span class="t">${fmtTime(m.ts)}</span></div>
+      <div class="bubble">${bubbleInner}</div>
+      <div class="m-ops">${ops}</div>
+    </div>`;
+  return div;
+}
+function renderChat(){
+  const body = $("#chatBody");
+  body.innerHTML = "";
+  const sess = getSession(state.activeSessionId);
+  const hasSess = !!(sess && sess.messages.length);
+  $("#welcome").style.display = sess ? "none" : "flex";
+  $("#chatHeader").style.display = sess ? "flex" : "none";
+  $("#inputBar").style.display = sess ? "block" : "none";
+  $("#scrollDown").classList.remove("show");
+  if(!sess){
+    // 欢迎页：注入快捷角色入口
+    const wq = $("#wQuick");
+    wq.innerHTML = `<span style="width:100%;text-align:center;color:var(--text-3);font-size:12px;margin-bottom:2px">— 或直接挑一位今晚的聊伴 —</span>`;
+    for(const ch of state.chars.filter(c => c.builtin).slice(0, 6)){
+      const b = document.createElement("button");
+      b.className = "q-role";
+      b.innerHTML = `<span>${ch.emoji}</span><b>${escapeHtml(ch.name)}</b>`;
+      b.addEventListener("click", () => openChar(ch.id));
+      wq.appendChild(b);
+    }
+    return;
+  }
+  const ch = getChar(sess.charId);
+  $("#hAvatar").style.cssText = avatarStyle(ch, 38);
+  $("#hAvatar").textContent = ch.emoji;
+  $("#hName").textContent = ch.name;
+  $("#hName").style.color = ch.color;
+  $("#hStatusText").textContent = state.generating ? "正在回应……" : `在线 · ${ch.tagline}`;
+  $("#charHint").textContent = `${ch.name} · 温度 ${state.api.temp} · 守则${state.api.rulesOn ? "开" : "关"}`;
+  const wrap = document.createElement("div");
+  wrap.className = "chat-wrap";
+  if(hasSess){
+    const tip = document.createElement("div");
+    tip.className = "day-tip";
+    tip.textContent = `— ${fmtDate(sess.createdAt)} · 与${ch.name}的对话 —`;
+    wrap.appendChild(tip);
+  }
+  sess.messages.forEach((m, i) => wrap.appendChild(msgNode(sess, m, i)));
+  body.appendChild(wrap);
+  updateTokenHint();
+  requestAnimationFrame(() => { body.scrollTop = body.scrollHeight; });
+}
+function updateTokenHint(){
+  const sess = getSession(state.activeSessionId); if(!sess) return;
+  const chars = sess.messages.reduce((a, m) => a + m.content.length, 0);
+  const carry = Math.min(sess.messages.length, 24);
+  $("#tokenHint").textContent = sess.messages.length ? `${sess.messages.length} 条 · 携带最近 ${carry} 条 · ≈${Math.round(chars/2)} tokens` : "";
+}
+/* ---- 侧栏渲染 ---- */
+function renderCharList(){
+  const box = $("#charList");
+  box.innerHTML = `<div class="side-section">常驻角色 · ${state.chars.length}</div>`;
+  for(const ch of state.chars){
+    const b = document.createElement("button");
+    b.className = "side-item" + (state.activeCharId === ch.id ? " on" : "");
+    b.innerHTML = `
+      <div class="avatar" style="${avatarStyle(ch)}">${ch.emoji}</div>
+      <div class="s-meta"><div class="s-name">${escapeHtml(ch.name)}</div><div class="s-sub">${escapeHtml(ch.tagline)}</div></div>
+      ${ch.builtin ? "" : `<span class="s-del" data-delchar="${ch.id}" title="删除角色">✕</span>`}`;
+    b.addEventListener("click", e => {
+      if(e.target.dataset.delchar) return;
+      openChar(ch.id);
+    });
+    box.appendChild(b);
+  }
+  const add = document.createElement("button");
+  add.className = "side-item";
+  add.innerHTML = `<div class="avatar" style="background:var(--surface-2);border:1px dashed var(--border);color:var(--accent)">＋</div><div class="s-meta"><div class="s-name" style="color:var(--accent)">角色工坊</div><div class="s-sub">亲手捏一个新角色</div></div>`;
+  add.addEventListener("click", () => openCharEditor(null));
+  box.appendChild(add);
+  const workshop = document.createElement("button");
+  workshop.className = "side-item";
+  workshop.innerHTML = `<div class="avatar" style="background:var(--surface-2)">🛠</div><div class="s-meta"><div class="s-name">复制内置角色改卡</div><div class="s-sub">站在巨人的肩膀上调教</div></div>`;
+  workshop.addEventListener("click", () => openCharEditor("copy"));
+  box.appendChild(workshop);
+}
+function renderSessionList(){
+  const box = $("#sessionList");
+  box.innerHTML = "";
+  const list = [...state.sessions].sort((a,b) => b.updatedAt - a.updatedAt);
+  // 首项：新建对话
+  const add = document.createElement("button");
+  add.className = "side-item";
+  add.innerHTML = `<div class="avatar" style="background:var(--surface-2);border:1px dashed var(--border);color:var(--accent)">＋</div><div class="s-meta"><div class="s-name" style="color:var(--accent)">开启新对话</div><div class="s-sub">和当前角色重开一场</div></div>`;
+  add.addEventListener("click", () => {
+    if(!state.activeCharId){ switchTab("chars"); toast("先去角色页挑一个人", "err"); return; }
+    const sess = createSession(state.activeCharId);
+    state.activeSessionId = sess.id; store.set("activeSessionId", sess.id);
+    renderAll(); closeDrawer();
+  });
+  box.appendChild(add);
+  if(list.length){
+    const sec = document.createElement("div");
+    sec.className = "side-section";
+    sec.textContent = `历史会话 · ${list.length}`;
+    box.appendChild(sec);
+  }
+  for(const s of list){
+    const ch = getChar(s.charId) || {name:"?", emoji:"🎭", color:"#888"};
+    const b = document.createElement("button");
+    b.className = "side-item" + (state.activeSessionId === s.id ? " on" : "");
+    b.innerHTML = `
+      <div class="avatar" style="${avatarStyle(ch)}">${ch.emoji}</div>
+      <div class="s-meta"><div class="s-name">${escapeHtml(s.title)}</div><div class="s-sub">${escapeHtml(ch.name)} · ${s.messages.length} 条</div></div>
+      <span class="s-time">${fmtAgo(s.updatedAt)}</span>
+      <span class="s-del" data-delsess="${s.id}" title="删除">✕</span>`;
+    b.addEventListener("click", e => {
+      if(e.target.dataset.delsess) return;
+      state.activeSessionId = s.id;
+      state.activeCharId = s.charId;
+      store.set("activeSessionId", s.id); store.set("activeCharId", s.charId);
+      renderAll(); closeDrawer();
+    });
+    box.appendChild(b);
+  }
+}
+function renderAll(){
+  renderCharList();
+  renderSessionList();
+  renderChat();
+  updateApiStatus();
+}
+/* ================================================================
+ * 系统提示词组装
+ * ================================================================ */
+function buildSystemPrompt(sess){
+  const ch = getChar(sess.charId);
+  const parts = [];
+  if(state.api.rulesOn) parts.push(RP_RULES);
+  parts.push(`【你的角色设定】\n${ch.persona}`);
+  if(sess.memo && sess.memo.trim()){
+    parts.push(`【当前剧情备忘（用户与你的约定，请遵守）】\n${sess.memo.trim()}`);
+  }
+  if(ch.examples && ch.examples.trim()){
+    let ex = "";
+    for(const line of ch.examples.split("\n")){
+      const [u, a] = line.split("|||");
+      if(u && a) ex += `用户说：「${u.trim()}」\n你回应：「${a.trim()}」\n\n`;
+    }
+    if(ex) parts.push(`【语气示例（模仿味道，不要逐字复读）】\n${ex.trim()}`);
+  }
+  return parts.join("\n\n");
+}
+function buildMessages(sess, opts = {}){
+  const history = sess.messages.filter(m => !m.err);
+  const carry = history.slice(-24);
+  const msgs = [];
+  msgs.push({ role: "system", content: buildSystemPrompt(sess) });
+  for(const m of carry){
+    if(opts.skipLastUser && m === history[history.length-1] && m.role === "user") continue;
+    msgs.push({ role: m.role, content: m.content });
+  }
+  return msgs;
+}
+
+/* ================================================================
+ * API 调用（OpenAI 兼容 · SSE 流式）
+ * ================================================================ */
+function apiBase(){
+  const p = state.api.preset;
+  if(p === "custom") return (state.api.base || "").replace(/\/+$/, "");
+  return PRESETS[p].base;
+}
+function validateApi(){
+  if(!state.api.key) return "还没填 API Key——点左下角「接入设置」配置";
+  if(state.api.preset === "custom" && !state.api.base) return "自定义接入需要填写接口地址";
+  if(!state.api.model) return "还没填模型名——在接入设置里选一个";
+  return null;
+}
+async function streamChat(messages, onDelta){
+  const base = apiBase();
+  const url = base.replace(/\/chat\/completions$/, "") + "/chat/completions";
+  const body = {
+    model: state.api.model,
+    messages,
+    temperature: Number(state.api.temp),
+    max_tokens: Number(state.api.max) || 1024,
+    stream: true
+  };
+  const ctrl = new AbortController();
+  state.ctrl = ctrl;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "Authorization": "Bearer " + state.api.key },
+    body: JSON.stringify(body),
+    signal: ctrl.signal
+  });
+  if(!res.ok){
+    let detail = "";
+    try{ const j = await res.json(); detail = j.error?.message || JSON.stringify(j).slice(0, 200); }
+    catch(e){ detail = await res.text().catch(()=>""); }
+    throw new Error(`HTTP ${res.status} · ${detail || res.statusText}`);
+  }
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buf = "", full = "";
+  while(true){
+    const { done, value } = await reader.read();
+    if(done) break;
+    buf += decoder.decode(value, { stream:true });
+    const lines = buf.split("\n");
+    buf = lines.pop();
+    for(const line of lines){
+      const t = line.trim();
+      if(!t.startsWith("data:")) continue;
+      const data = t.slice(5).trim();
+      if(data === "[DONE]") continue;
+      try{
+        const j = JSON.parse(data);
+        const d = j.choices?.[0]?.delta;
+        const piece = d?.content || "";
+        if(piece){ full += piece; onDelta(piece, full); }
+      }catch(e){ /* 忽略不完整行 */ }
+    }
+  }
+  return full;
+}
+
+/* ================================================================
+ * 发送 / 重写 / 继续 / 编辑
+ * ================================================================ */
+function appendMsgNode(sess, m){
+  const wrap = $("#chatBody .chat-wrap");
+  if(!wrap) return renderChat();
+  $("#welcome").style.display = "none";
+  wrap.appendChild(msgNode(sess, m, sess.messages.length - 1));
+  const body = $("#chatBody");
+  requestAnimationFrame(() => body.scrollTo({ top: body.scrollHeight, behavior: "smooth" }));
+}
+async function generate(sess, mode){
+  // mode: "reply" 正常回复 / "continue" 续写最后一条 / "regen" 重写最后一条
+  const err = validateApi();
+  if(err) return toast(err, "err");
+  if(state.generating) return;
+  state.generating = true;
+  $("#sendBtn").classList.add("stop");
+  $("#sendBtn").textContent = "■";
+  $("#hStatusText").textContent = "正在回应……";
+
+  // 组装请求消息
+  const reqMsgs = buildMessages(sess, { skipLastUser: mode !== "reply" });
+  if(mode === "continue"){
+    reqMsgs.push({ role:"user", content:"（系统指令：请从你上一句话自然地继续往下说，保持角色与情境，不要重复已有内容。）" });
+  }
+
+  // 占位气泡
+  const placeholder = { role:"assistant", content:"", ts: nowTs() };
+  sess.messages.push(placeholder);
+  appendMsgNode(sess, placeholder);
+  const bubble = [...$$("#chatBody .msg")].pop()?.querySelector(".bubble");
+  bubble.classList.add("streaming");
+  bubble.innerHTML = `<span class="cursor"></span>`;
+
+  let lastRender = 0;
+  const paint = (full) => {
+    const now = performance.now();
+    if(now - lastRender < 40) return;
+    lastRender = now;
+    bubble.innerHTML = renderRich(full) + `<span class="cursor"></span>`;
+    const body = $("#chatBody");
+    if(body.scrollHeight - body.scrollTop - body.clientHeight < 160) body.scrollTop = body.scrollHeight;
+  };
+  try{
+    const full = await streamChat(reqMsgs, (_, f) => paint(f));
+    if(!full.trim()) throw new Error("模型返回了空内容");
+    placeholder.content = full.trim();
+    placeholder.ts = nowTs();
+  }catch(e){
+    if(e.name === "AbortError"){
+      if(placeholder.content){
+        placeholder.content += "……";
+      }else{
+        sess.messages.pop();
+      }
+      toast("已停止生成", "ok");
+    }else{
+      sess.messages.pop();
+      sess.messages.push({ role:"assistant", content:"", err:true, errMsg:e.message, ts:nowTs() });
+      saveSessions();
+      state.generating = false;
+      finalizeGen(sess);
+      renderChat();
+      return;
+    }
+  }
+  bubble.classList.remove("streaming");
+  // 会话元数据
+  sess.updatedAt = nowTs();
+  if(sess.title === "新对话"){
+    const firstUser = sess.messages.find(m => m.role === "user" && !m.err);
+    if(firstUser) sess.title = firstUser.content.slice(0, 16) || "新对话";
+  }
+  saveSessions();
+  finalizeGen(sess);
+  renderChat();
+}
+function finalizeGen(sess){
+  state.generating = false;
+  state.ctrl = null;
+  $("#sendBtn").classList.remove("stop");
+  $("#sendBtn").textContent = "➤";
+  const ch = getChar(sess.charId);
+  if(ch) $("#hStatusText").textContent = `在线 · ${ch.tagline}`;
+}
+function stopGen(){
+  if(state.ctrl){ state.ctrl.abort(); }
+}
+function sendCurrent(){
+  const sess = ensureSession();
+  if(!sess) return toast("先去侧栏选一个角色吧", "err");
+  const ta = $("#msgInput");
+  const text = ta.value.trim();
+  if(!text) return;
+  if(state.generating){ stopGen(); return; }
+  sess.messages.push({ role:"user", content:text, ts: nowTs() });
+  ta.value = "";
+  autoGrow(ta);
+  appendMsgNode(sess, sess.messages[sess.messages.length-1]);
+  saveSessions();
+  generate(sess, "reply");
+}
+function opHandler(e){
+  const btn = e.target.closest("button[data-op]");
+  if(!btn) return;
+  const op = btn.dataset.op, i = +btn.dataset.i;
+  const sess = getSession(state.activeSessionId); if(!sess) return;
+  const m = sess.messages[i]; if(!m) return;
+  if(op === "copy"){
+    navigator.clipboard.writeText(m.content).then(() => toast("已复制", "ok"), () => toast("复制失败", "err"));
+  }else if(op === "del"){
+    if(m.greet) return toast("开场白是入馆的门票，删不得～", "err");
+    sess.messages.splice(i, 1); saveSessions(); renderChat();
+  }else if(op === "regen"){
+    if(state.generating) return toast("先生成完再说", "err");
+    const prevUser = [...sess.messages.slice(0, i)].reverse().find(x => x.role === "user");
+    if(!prevUser) return toast("开场白没有可重写的回应", "err");
+    sess.messages.splice(i); saveSessions();
+    generate(sess, "reply");
+  }else if(op === "cont"){
+    if(state.generating) return toast("先生成完再说", "err");
+    generate(sess, "continue");
+  }else if(op === "edit"){
+    if(state.generating) return toast("先生成完再说", "err");
+    editMessage(sess, i);
+  }
+}
+function editMessage(sess, i){
+  const m = sess.messages[i];
+  const box = $("#editBox");
+  box.style.display = "block";
+  $("#editText").value = m.content;
+  $("#editText").focus();
+  $("#editSave").onclick = () => {
+    const v = $("#editText").value.trim();
+    if(!v) return;
+    m.content = v; m.ts = nowTs();
+    sess.messages.splice(i + 1);
+    box.style.display = "none";
+    saveSessions(); renderChat();
+    if(sess.messages[sess.messages.length-1]?.role === "user") generate(sess, "reply");
+  };
+  $("#editCancel").onclick = () => box.style.display = "none";
+}
+/* ================================================================
+ * 模态框基建
+ * ================================================================ */
+function openModal(id){ $( "#" + id).classList.add("show"); $("#mask").classList.add("show"); }
+function closeModal(id){ $("#" + id).classList.remove("show"); if(!$$(".modal.show").length) $("#mask").classList.remove("show"); }
+function confirmBox(title, html, onOk){
+  $("#confirmTitle").textContent = title;
+  $("#confirmBody").innerHTML = html;
+  openModal("modalConfirm");
+  $("#confirmOk").onclick = () => { closeModal("modalConfirm"); onOk && onOk(); };
+}
+function toast(msg, type){
+  const t = $("#toast");
+  t.textContent = msg;
+  t.className = "show " + (type || "");
+  clearTimeout(t._h);
+  t._h = setTimeout(() => t.className = "", 2400);
+}
+
+/* ================================================================
+ * 接入设置
+ * ================================================================ */
+function renderPresetGrid(){
+  const grid = $("#presetGrid");
+  grid.innerHTML = "";
+  for(const [k, v] of Object.entries(PRESETS)){
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "preset-btn" + (state.api.preset === k ? " on" : "");
+    b.textContent = v.name;
+    b.addEventListener("click", () => { state.api.preset = k; syncPresetUI(); renderPresetGrid(); });
+    grid.appendChild(b);
+  }
+}
+function syncPresetUI(){
+  const p = state.api.preset;
+  const preset = PRESETS[p];
+  const baseInput = $("#apiBase"), modelInput = $("#apiModel"), modelDatalist = $("#modelList");
+  if(p === "custom"){
+    baseInput.disabled = false;
+    if(!baseInput.value) baseInput.value = state.api.base || "";
+    baseInput.placeholder = "https://…/v1（OpenAI 兼容地址）";
+  }else{
+    baseInput.disabled = true;
+    baseInput.value = preset.base;
+  }
+  modelDatalist.innerHTML = (preset.models || []).map(m => `<option value="${m}">`).join("");
+  if(!modelInput.value || p !== "custom") modelInput.value = state.api.model || "";
+}
+function openApiModal(){
+  renderPresetGrid();
+  $("#apiBase").value = state.api.preset === "custom" ? (state.api.base || "") : PRESETS[state.api.preset].base;
+  $("#apiKey").value = state.api.key || "";
+  $("#apiModel").value = state.api.model || "";
+  $("#apiTemp").value = state.api.temp;
+  $("#tempVal").textContent = Number(state.api.temp).toFixed(2);
+  $("#apiMax").value = state.api.max;
+  $("#rulesChk").checked = !!state.api.rulesOn;
+  openModal("modalApi");
+}
+function saveApiModal(){
+  state.api.base = state.api.preset === "custom" ? $("#apiBase").value.trim() : PRESETS[state.api.preset].base;
+  state.api.key = $("#apiKey").value.trim();
+  state.api.model = $("#apiModel").value.trim();
+  state.api.temp = $("#apiTemp").value;
+  state.api.max = +$("#apiMax").value || 1024;
+  state.api.rulesOn = $("#rulesChk").checked;
+  saveApi(); updateApiStatus(); renderChat();
+  closeModal("modalApi");
+  toast("接入设置已保存", "ok");
+}
+async function testConnection(){
+  const btn = $("#testBtn");
+  // 用表单当前值测试（不影响已保存配置）
+  const probe = {
+    ...state.api,
+    preset: state.api.preset,
+    base: state.api.preset === "custom" ? $("#apiBase").value.trim() : PRESETS[state.api.preset].base,
+    key: $("#apiKey").value.trim(),
+    model: $("#apiModel").value.trim()
+  };
+  if(!probe.key) return toast("先填 API Key", "err");
+  if(probe.preset === "custom" && !probe.base) return toast("自定义接入需要填接口地址", "err");
+  if(!probe.model) return toast("填一个模型名", "err");
+  btn.disabled = true; btn.textContent = "测试中…";
+  try{
+    const res = await fetch(probe.base.replace(/\/+$/,"") + "/chat/completions", {
+      method:"POST",
+      headers:{ "Content-Type":"application/json", "Authorization":"Bearer " + probe.key },
+      body: JSON.stringify({ model: probe.model, messages:[{role:"user",content:"回复「通」一个字即可"}], max_tokens: 8 })
+    });
+    if(res.ok){ toast("连接成功，模型有回应 ✓", "ok"); }
+    else{
+      let msg = "HTTP " + res.status;
+      try{ const j = await res.json(); msg += " · " + (j.error?.message || "").slice(0,120); }catch(e){}
+      toast("连接失败：" + msg, "err");
+    }
+  }catch(e){
+    toast("网络错误：" + e.message + "（若为跨域拦截，请换支持 CORS 的官方地址或本地中转）", "err");
+  }
+  btn.disabled = false; btn.textContent = "测试连接";
+}
+function updateApiStatus(){
+  const ok = state.api.key && state.api.model && (state.api.preset !== "custom" || state.api.base);
+  const dot = $("#apiStatusBtn .dot");
+  dot.style.background = ok ? "var(--ok)" : "var(--text-3)";
+  dot.style.boxShadow = ok ? "0 0 6px var(--ok)" : "none";
+  $("#apiStatusText").textContent = ok ? `${PRESETS[state.api.preset]?.name || "自定义"} · 已接入` : "设置 API";
+}
+
+/* ================================================================
+ * 角色工坊
+ * ================================================================ */
+const CHAR_TEMPLATE = {
+  name:"", emoji:"🎭", color:"#7fd4b8", tagline:"",
+  persona:`你是（姓名），（年龄/身份），（和用户是什么关系：朋友/网友/搭档……）。
+
+性格与说话方式：
+- （2~4 条具体的性格，别写抽象词，写行为）
+- 口头禅/口癖：
+- 例句：「（动作）……台词。」
+- 例句：「……台词。」
+
+在乎与忌讳：
+- 在乎：
+- 忌讳：（听到什么会有反应？什么反应？）
+- 底线：
+
+习惯：（小动作、爱好、害怕的东西——这些让人活起来）`,
+  greeting:"（时间、地点、氛围、你正在做什么——然后向用户开口）",
+  examples:`用户可能说的一句话|||你作为角色的回应示范。
+再来一句不同情绪的|||回应示范。`
+};
+const EMOJIS = ["🎭","🌙","🔥","✨","📻","🛰","🦊","🐉","🌸","🎧","🕹","🐙","👑","🧊","🌊","🕯","🎻","🀄","☕","🪐"];
+const COLORS = ["#e6b566","#ff7a59","#b78ef0","#6fbf9a","#5ac8e8","#e0666f","#8fd46a","#d48ab8"];
+function renderPickers(selEmoji, selColor){
+  const ep = $("#emojiPick"), cp = $("#colorPick");
+  ep.innerHTML = "";
+  EMOJIS.forEach(e => {
+    const b = document.createElement("button");
+    b.type = "button"; b.className = "ep-item" + (e === selEmoji ? " on" : ""); b.textContent = e;
+    b.addEventListener("click", () => renderPickers(e, cp.dataset.sel || selColor));
+    ep.appendChild(b);
+  });
+  cp.innerHTML = "";
+  cp.dataset.sel = selColor;
+  COLORS.forEach(c => {
+    const b = document.createElement("button");
+    b.type = "button"; b.className = "cp-item" + (c === selColor ? " on" : "");
+    b.style.background = c;
+    b.addEventListener("click", () => renderPickers(ep.dataset.sel || selEmoji, c));
+    cp.appendChild(b);
+  });
+  ep.dataset.sel = selEmoji;
+}
+function openCharEditor(arg){
+  let ch;
+  if(arg === "copy"){
+    const src = getChar(state.activeCharId) || BUILTIN_CHARS[0];
+    ch = { ...src, id: uid(), name: src.name + "·改", builtin:false };
+  }else if(arg){
+    ch = getChar(arg);
+  }else{
+    ch = { ...CHAR_TEMPLATE, id: uid(), builtin:false };
+  }
+  state.editCharId = arg && arg !== "copy" ? arg : null;
+  $("#charModalTitle").textContent = arg && arg !== "copy" ? `编辑 · ${ch.name}` : (arg === "copy" ? `复制改卡 · 基于${ch.name}` : "捏一个新角色");
+  $("#cName").value = ch.name; $("#cTagline").value = ch.tagline;
+  $("#cPersona").value = ch.persona; $("#cGreeting").value = ch.greeting;
+  $("#cExamples").value = ch.examples || "";
+  renderPickers(ch.emoji, ch.color);
+  $("#delCharBtn").style.display = state.editCharId && !getChar(state.editCharId)?.builtin ? "inline-block" : "none";
+  openModal("modalChar");
+}
+function saveCharEditor(){
+  const name = $("#cName").value.trim();
+  const persona = $("#cPersona").value.trim();
+  if(!name) return toast("角色总得有个名字吧", "err");
+  if(persona.length < 20) return toast("人设太短了，至少写几句让它活起来", "err");
+  const ep = $("#emojiPick").dataset.sel || "🎭";
+  const cp = $("#colorPick").dataset.sel || "#7fd4b8";
+  const data = {
+    name, emoji: ep, color: cp,
+    tagline: $("#cTagline").value.trim() || "待定角色",
+    persona, greeting: $("#cGreeting").value.trim() || `（${name}出现在你面前）……你好。`,
+    examples: $("#cExamples").value.trim()
+  };
+  if(state.editCharId){
+    Object.assign(getChar(state.editCharId), data);
+  }else{
+    state.chars.push({ id: uid(), builtin:false, ...data });
+  }
+  saveChars(); closeModal("modalChar");
+  renderCharList();
+  toast("角色已保存", "ok");
+}
+function delChar(id){
+  const ch = getChar(id); if(!ch) return;
+  confirmBox("删除角色", `删除 <b>${escapeHtml(ch.name)}</b>？它和用户的历史会话会一并清掉。`, () => {
+    state.chars = state.chars.filter(c => c.id !== id);
+    state.sessions = state.sessions.filter(s => s.charId !== id);
+    if(state.activeCharId === id){ state.activeCharId = null; state.activeSessionId = null; }
+    saveChars(); saveSessions(); renderAll();
+    toast("角色已删除", "ok");
+  });
+}
+
+/* ================================================================
+ * 剧情备忘
+ * ================================================================ */
+function openMemo(){
+  const sess = ensureSession(); if(!sess) return toast("先选一个角色", "err");
+  $("#memoText").value = sess.memo || "";
+  openModal("modalMemo");
+}
+function saveMemo(){
+  const sess = getSession(state.activeSessionId); if(!sess) return;
+  sess.memo = $("#memoText").value;
+  saveSessions(); closeModal("modalMemo");
+  toast("备忘已生效，下一句开始模型就会遵守", "ok");
+}
+
+/* ================================================================
+ * 备份迁移
+ * ================================================================ */
+function doExportData(){
+  const dump = { v:1, exportedAt: nowTs(), chars: state.chars, sessions: state.sessions, api: state.api };
+  const blob = new Blob([JSON.stringify(dump, null, 2)], {type:"application/json"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `浮生角色馆备份_${fmtDate(nowTs())}.json`;
+  a.click(); URL.revokeObjectURL(a.href);
+}
+function doImportData(file){
+  const r = new FileReader();
+  r.onload = () => {
+    try{
+      const d = JSON.parse(r.result);
+      if(!d.chars || !d.sessions) throw new Error("格式不对");
+      confirmBox("导入确认", "导入会<b>覆盖</b>当前全部数据，确定吗？", () => {
+        state.chars = d.chars; state.sessions = d.sessions;
+        if(d.api) state.api = { ...state.api, ...d.api };
+        saveChars(); saveSessions(); saveApi();
+        loadState(); renderAll();
+        closeModal("modalData");
+        toast("导入完成，欢迎回来", "ok");
+      });
+    }catch(e){ toast("导入失败：" + e.message, "err"); }
+  };
+  r.readAsText(file);
+}
+
+/* ================================================================
+ * 角色卡详情
+ * ================================================================ */
+function openInfoModal(){
+  const sess = getSession(state.activeSessionId); if(!sess) return;
+  const ch = getChar(sess.charId); if(!ch) return;
+  const fmt = s => escapeHtml(s).replace(/\n/g, "<br>");
+  $("#infoBody").innerHTML = `
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
+      <div class="avatar" style="${avatarStyle(ch, 46)};font-size:24px">${ch.emoji}</div>
+      <div><div style="font-size:17px;font-weight:700;color:${ch.color}">${escapeHtml(ch.name)}</div>
+      <div style="font-size:12.5px;color:var(--text-3)">${escapeHtml(ch.tagline)} · ${ch.builtin ? "馆内常驻" : "你捏的角色"}</div></div>
+      <span style="flex:1"></span>
+      <button class="btn ghost" id="infoEditBtn">编辑此卡</button>
+    </div>
+    <div class="note-box" style="margin-bottom:12px"><b>开场白</b><br>${fmt(ch.greeting)}</div>
+    <div style="font-size:13.5px;color:var(--text-2);line-height:1.8;max-height:320px;overflow:auto;background:var(--bg-deep);border:1px solid var(--border-subtle);border-radius:var(--r-md);padding:12px">${fmt(ch.persona)}</div>`;
+  openModal("modalInfo");
+  $("#infoEditBtn").onclick = () => { closeModal("modalInfo"); openCharEditor(ch.id); };
+}
+
+/* ================================================================
+ * 输入框 & 事件绑定
+ * ================================================================ */
+function autoGrow(ta){
+  ta.style.height = "auto";
+  ta.style.height = Math.min(ta.scrollHeight, 160) + "px";
+}
+function switchTab(tab){
+  state.sideTab = tab; store.set("sideTab", tab);
+  $("#tabChars").classList.toggle("on", tab === "chars");
+  $("#tabSessions").classList.toggle("on", tab === "sess");
+  $("#charList").style.display = tab === "chars" ? "block" : "none";
+  $("#sessionList").style.display = tab === "sess" ? "block" : "none";
+}
+function toggleTheme(){
+  const cur = document.documentElement.dataset.theme;
+  const next = cur === "dark" ? "light" : "dark";
+  document.documentElement.dataset.theme = next;
+  store.set("theme", next);
+  $("#themeBtn").textContent = next === "dark" ? "🌙" : "☀️";
+}
+function openDrawer(){
+  $("#sidebar").classList.add("open");
+  $("#drawerMask").classList.add("show");
+}
+function closeDrawer(){
+  $("#sidebar").classList.remove("open");
+  $("#drawerMask").classList.remove("show");
+}
+function quickAction(act){
+  const sess = ensureSession(); if(!sess) return;
+  if(act === "continue"){
+    if(!sess.messages.length) return toast("还没有对话可以继续", "err");
+    if(state.generating) return;
+    generate(sess, "continue");
+  }else if(act === "more"){
+    if(state.generating) return;
+    const ta = $("#msgInput");
+    ta.value = "（多讲一些细节，展开说说）";
+    ta.focus(); autoGrow(ta);
+  }else if(act === "redo"){
+    if(state.generating) return toast("等它说完再重写", "err");
+    if(!sess.messages.length) return;
+    // 从后往前找最后一条 assistant 消息重写；开场白不可重写
+    let idx = -1;
+    for(let i = sess.messages.length - 1; i >= 0; i--){
+      if(sess.messages[i].role === "assistant" && !sess.messages[i].err && !sess.messages[i].greet){ idx = i; break; }
+    }
+    if(idx < 0) return toast("还没有可重写的回复", "err");
+    sess.messages.splice(idx);
+    saveSessions(); renderChat();
+    if(sess.messages.length && sess.messages[sess.messages.length-1].role === "user"){
+      generate(sess, "reply");
+    }
+  }
+}
+function bindEvents(){
+  // 侧栏 tab
+  $("#tabChars").addEventListener("click", () => switchTab("chars"));
+  $("#tabSessions").addEventListener("click", () => switchTab("sess"));
+  // 底部按钮
+  $("#apiStatusBtn").addEventListener("click", openApiModal);
+  $("#themeBtn").addEventListener("click", toggleTheme);
+  $("#dataBtn").addEventListener("click", () => openModal("modalData"));
+  // 聊天头部
+  $("#menuBtn").addEventListener("click", openDrawer);
+  $("#drawerMask").addEventListener("click", closeDrawer);
+  $("#memoBtn").addEventListener("click", openMemo);
+  $("#charInfoBtn").addEventListener("click", openInfoModal);
+  $("#exportBtn").addEventListener("click", exportSession);
+  $("#clearBtn").addEventListener("click", () => {
+    const sess = ensureSession(); if(!sess || !sess.messages.length) return;
+    confirmBox("清空对话", "清空这场对话的全部消息？（角色和剧情备忘会保留，开场白会重新出现）", () => {
+      const ch = getChar(sess.charId);
+      sess.messages = ch && ch.greeting ? [{ role:"assistant", content: ch.greeting, ts: nowTs(), greet:true }] : [];
+      sess.title = "新对话"; saveSessions(); renderChat(); toast("已清空，从头再来", "ok");
+    });
+  });
+  // 消息操作（事件委托）
+  $("#chatBody").addEventListener("click", opHandler);
+  // 回到底部按钮
+  const body = $("#chatBody");
+  body.addEventListener("scroll", () => {
+    const far = body.scrollHeight - body.scrollTop - body.clientHeight > 240;
+    $("#scrollDown").classList.toggle("show", far && !!state.activeSessionId);
+  });
+  $("#scrollDown").addEventListener("click", () => body.scrollTo({ top: body.scrollHeight, behavior: "smooth" }));
+  // 输入
+  const ta = $("#msgInput");
+  ta.addEventListener("input", () => autoGrow(ta));
+  ta.addEventListener("keydown", e => {
+    if(e.key === "Enter" && !e.shiftKey && !e.isComposing){ e.preventDefault(); sendCurrent(); }
+  });
+  $("#sendBtn").addEventListener("click", sendCurrent);
+  // 快捷 chips
+  $("#quickChips").addEventListener("click", e => {
+    const chip = e.target.closest(".chip"); if(!chip) return;
+    quickAction(chip.dataset.act);
+  });
+  // 欢迎页
+  $("#welcomeApiBtn").addEventListener("click", openApiModal);
+  // 模态关闭
+  $$("[data-close]").forEach(b => b.addEventListener("click", () => closeModal(b.dataset.close)));
+  $("#mask").addEventListener("click", () => {
+    $$(".modal.show").forEach(m => m.classList.remove("show"));
+    $("#mask").classList.remove("show");
+  });
+  document.addEventListener("keydown", e => {
+    if(e.key === "Escape"){
+      $$(".modal.show").forEach(m => m.classList.remove("show"));
+      $("#mask").classList.remove("show");
+      closeDrawer();
+    }
+  });
+  // API 设置
+  $("#tempVal").textContent = Number(state.api.temp).toFixed(2);
+  $("#apiTemp").addEventListener("input", e => $("#tempVal").textContent = Number(e.target.value).toFixed(2));
+  $("#saveApiBtn").addEventListener("click", saveApiModal);
+  $("#testBtn").addEventListener("click", testConnection);
+  // 角色工坊
+  $("#saveCharBtn").addEventListener("click", saveCharEditor);
+  $("#delCharBtn").addEventListener("click", () => {
+    if(state.editCharId) delChar(state.editCharId);
+  });
+  // 备忘
+  $("#saveMemoBtn").addEventListener("click", saveMemo);
+  // 备份
+  $("#exportDataBtn").addEventListener("click", doExportData);
+  $("#importDataBtn").addEventListener("click", () => $("#importFile").click());
+  $("#importFile").addEventListener("change", e => { if(e.target.files[0]) doImportData(e.target.files[0]); e.target.value = ""; });
+  // 侧栏删除（委托）
+  $("#charList").addEventListener("click", e => {
+    const id = e.target.dataset.delchar;
+    if(id) delChar(id);
+  });
+  $("#sessionList").addEventListener("click", e => {
+    const id = e.target.dataset.delsess;
+    if(id) deleteSession(id);
+  });
+}
+
+/* ================================================================
+ * 启动
+ * ================================================================ */
+loadState();
+switchTab(state.sideTab);
+bindEvents();
+renderAll();
+if(!state.chars.find(c => c.id === state.activeCharId)){
+  state.activeCharId = null; state.activeSessionId = null;
+  renderChat();
+}
+</script>
+</body>
+</html>
