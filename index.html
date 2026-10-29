@@ -83,7 +83,7 @@ textarea{resize:none}
 .side-item .s-del{opacity:0;width:24px;height:24px;border-radius:6px;color:var(--text-3);display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all var(--t-fast)}
 .side-item:hover .s-del{opacity:1}
 .side-item .s-del:hover{color:var(--danger);background:var(--danger-soft)}
-.side-foot{padding:10px 14px;border-top:1px solid var(--border-subtle);display:flex;gap:8px}
+.side-foot{padding:10px 14px 4px;border-top:1px solid var(--border-subtle);display:flex;gap:8px}
 .btn-api-key{
   flex:1;display:flex;align-items:center;justify-content:center;gap:6px;
   padding:9px;border-radius:var(--r-md);font-size:13px;font-weight:500;
@@ -295,6 +295,28 @@ html[data-theme="light"] #sceneGlow{opacity:.45}
 .depth-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
 .depth-grid .preset-btn{padding:9px 6px;text-align:center}
 .depth-desc{font-size:11.5px;color:var(--text-3);margin-top:6px;line-height:1.5;min-height:17px}
+/* ====== V5 玩法指南 ====== */
+.temp-help{display:inline-flex;width:18px;height:18px;border-radius:50%;border:1px solid var(--border);color:var(--text-3);font-size:11px;align-items:center;justify-content:center;margin-left:6px;vertical-align:1px;transition:all var(--t-fast)}
+.temp-help:hover{color:var(--accent);border-color:var(--accent-line)}
+.gt{display:grid;grid-template-columns:86px 1fr;gap:0;border:1px solid var(--border);border-radius:var(--r-md);overflow:hidden;margin-top:8px}
+.gt > div{padding:8px 10px;font-size:12.5px;line-height:1.55;border-top:1px solid var(--border-subtle)}
+.gt > div:nth-child(-n+2){border-top:none}
+.gt .gt-r{background:var(--surface-2);font-weight:600;color:var(--accent);white-space:nowrap}
+.gt .gt-d{color:var(--text-2)}
+.gt .gt-d b{color:var(--text)}
+.g-sec{margin-top:16px}
+.g-sec:first-child{margin-top:0}
+.g-sec > h4{font-size:13px;color:var(--accent);letter-spacing:1px;margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.g-steps{display:flex;gap:8px;flex-wrap:wrap}
+.g-step{flex:1;min-width:150px;background:var(--surface-2);border:1px solid var(--border);border-radius:var(--r-md);padding:10px 12px;font-size:12.5px;line-height:1.6}
+.g-step b{display:block;color:var(--accent);margin-bottom:3px}
+.g-list{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.g-item{background:var(--surface-2);border:1px solid var(--border);border-radius:var(--r-sm);padding:8px 11px;font-size:12px;line-height:1.6;color:var(--text-2)}
+.g-item b{color:var(--text);display:block;font-size:12.5px}
+.g-tips{font-size:12.5px;color:var(--text-2);line-height:2}
+.g-tips kbd{background:var(--surface-2);border:1px solid var(--border);border-radius:4px;padding:1px 6px;font-size:11px;font-family:monospace}
+.side-guide{width:100%;padding:7px 0;border-radius:var(--r-sm);color:var(--text-3);font-size:12px;display:flex;align-items:center;justify-content:center;gap:6px;transition:all var(--t-fast)}
+.side-guide:hover{color:var(--accent);background:var(--accent-soft)}
 /* ====== V4 剧本杀 ====== */
 #stageBar{position:relative;z-index:2;margin:12px auto -6px;width:max-content;max-width:92%;display:none;align-items:center;gap:9px;padding:7px 16px;border-radius:var(--r-full);background:linear-gradient(120deg,var(--accent-soft),transparent);border:1px solid var(--accent-line);font-size:12.5px;color:var(--text);letter-spacing:1px}
 #stageBar.show{display:flex}
@@ -379,6 +401,7 @@ html[data-theme="light"] #sceneGlow{opacity:.45}
       <button class="btn-api-key" id="apiStatusBtn"><span class="dot"></span><span id="apiStatusText">设置 API</span></button>
       <button class="icon-btn-mini" id="dataBtn" title="备份 / 导入数据">⇅</button>
     </div>
+    <button class="side-guide" id="guideBtn">📖 玩法指南</button>
   </aside>
   <div id="drawerMask"></div>
 
@@ -442,6 +465,7 @@ html[data-theme="light"] #sceneGlow{opacity:.45}
         <div class="w-step"><span class="n">3</span><div><b>开聊</b><span>流式回复、随时重写、剧情备忘。把日子讲给角色听。</span></div></div>
       </div>
       <button class="btn primary" id="welcomeApiBtn" style="margin-top:18px">先去设置 API →</button>
+      <button class="btn ghost" id="welcomeGuideBtn" style="margin-top:18px">📖 玩法指南</button>
       <div class="w-sub" id="wTimeGreet"></div>
       <div class="w-quick" id="wQuick"></div>
     </div>
@@ -483,6 +507,54 @@ html[data-theme="light"] #sceneGlow{opacity:.45}
   </div>
 </div>
 
+<!-- ================= 玩法指南 ================= -->
+<div class="modal narrow" id="modalGuide">
+  <div class="modal-head"><h3>📖 玩法指南</h3><button class="modal-close" data-close="modalGuide">✕</button></div>
+  <div class="modal-body">
+    <div class="g-sec">
+      <h4>🔥 扮演温度 —— 说话的冒险度</h4>
+      <p style="font-size:12.5px;color:var(--text-2);line-height:1.7">AI 每写一个字都在"掷骰子"挑词。温度就是掷骰子的力度：越低越稳、越高越敢。角色扮演需要一点冒险才"活"，但太高会放飞自我。</p>
+      <div class="gt">
+        <div class="gt-r">0.7 ~ 0.8</div><div class="gt-d"><b>推理模式</b> — 剧本杀查案、要逻辑严丝合缝时用，防止线索前后矛盾。</div>
+        <div class="gt-r">0.8 ~ 1.0</div><div class="gt-d"><b>日常陪聊</b> — 活泼但不飞，想长聊 选这段。</div>
+        <div class="gt-r">1.0 ~ 1.2</div><div class="gt-d"><b>沉浸剧情（馆内默认 0.9）</b> — 惊喜台词高发区，重写一次常有惊喜。</div>
+        <div class="gt-r">1.5 以上</div><div class="gt-d"><b>放飞模式</b> — AI 开始写诗、造词、忘设定。玩票可以，认真别来。</div>
+      </div>
+    </div>
+    <div class="g-sec">
+      <h4>🚪 三步开聊</h4>
+      <div class="g-steps">
+        <div class="g-step"><b>① 接上钥匙</b>左下角「设置 API」填 Key——三档存档可各存一家模型。</div>
+        <div class="g-step"><b>② 挑一位角色</b>八个常驻角色，或翻开一个剧本杀，或用「AI 炼角」现捏一个。</div>
+        <div class="g-step"><b>③ 开聊</b>Enter 发送。场景与音乐会随剧情流动，背景色就是故事的心跳。</div>
+      </div>
+    </div>
+    <div class="g-sec">
+      <h4>🎛 玩法速查</h4>
+      <div class="g-list">
+        <div class="g-item"><b>🎭 剧本杀</b>欢迎页剧本区开局。DM 分幕引导，顶部进度条自动点亮，终局弹结局卡。</div>
+        <div class="g-item"><b>🎲 剧情骰子</b>输入框上方掷一把——40+ 事件卡直接砸进剧情，卡住就掷。</div>
+        <div class="g-item"><b>📌 剧情备忘</b>聊天页右上角。写给角色的幕后笔记，每轮悄悄塞给模型。</div>
+        <div class="g-item"><b>📖 回复详细度</b>设置里三档：简洁 / 标准 / 沉浸（默认，4~8 句铺开画面）。</div>
+        <div class="g-item"><b>✨ AI 炼角</b>侧栏入口。一句话描述，接入的模型帮你炼出完整角色卡。</div>
+        <div class="g-item"><b>💾 三存档与备份</b>设置里三套 API 一键切换；⇅ 可导出全部数据带走。</div>
+      </div>
+    </div>
+    <div class="g-sec">
+      <h4>⌨️ 小技巧</h4>
+      <div class="g-tips">
+        <kbd>Enter</kbd> 发送 · <kbd>Shift</kbd>+<kbd>Enter</kbd> 换行<br>
+        消息上悬浮出现操作：✎ 编辑后重新生成 · ↺ 重写 · ▶ 让 TA 继续 · 🗑 删除<br>
+        🔥 按钮是炉火氛围音，🌙 按钮切换明暗。同一句话按 ↺ 重写——温度效应常给你惊喜版本。
+      </div>
+    </div>
+  </div>
+  <div class="modal-foot">
+    <span style="flex:1"></span>
+    <button class="btn primary" data-close="modalGuide">开聊去</button>
+  </div>
+</div>
+
 <div class="mask" id="mask"></div>
 <div class="modal narrow" id="modalApi">
   <div class="modal-head"><h3>🔑 API 接入</h3><button class="modal-close" data-close="modalApi">✕</button></div>
@@ -514,7 +586,7 @@ html[data-theme="light"] #sceneGlow{opacity:.45}
       <p class="depth-desc" id="depthDesc"></p>
     </div>
     <div class="field">
-      <label>扮演温度 <span class="opt" id="tempVal">0.90</span></label>
+      <label>扮演温度 <span class="opt" id="tempVal">0.90</span><button type="button" class="temp-help" id="tempHelp" title="温度是什么？点我看档位参考">?</button></label>
       <input type="range" id="apiTemp" min="0" max="2" step="0.05" value="0.9" style="width:100%;accent-color:var(--accent)">
     </div>
     <div class="field .row2">
@@ -2015,6 +2087,8 @@ function bindEvents(){
   $("#tabSessions").addEventListener("click", () => switchTab("sess"));
   // 底部按钮
   $("#apiStatusBtn").addEventListener("click", openApiModal);
+  $("#guideBtn").addEventListener("click", () => openModal("modalGuide"));
+  $("#tempHelp").addEventListener("click", () => { closeModal("modalApi"); openModal("modalGuide"); });
   $("#themeBtn").addEventListener("click", toggleTheme);
   $("#dataBtn").addEventListener("click", () => openModal("modalData"));
   // 聊天头部
@@ -2055,6 +2129,7 @@ function bindEvents(){
   });
   // 欢迎页
   $("#welcomeApiBtn").addEventListener("click", openApiModal);
+  $("#welcomeGuideBtn").addEventListener("click", () => openModal("modalGuide"));
   // 模态关闭
   $$("[data-close]").forEach(b => b.addEventListener("click", () => closeModal(b.dataset.close)));
   $("#mask").addEventListener("click", () => {
