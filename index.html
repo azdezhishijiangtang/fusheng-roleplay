@@ -560,8 +560,12 @@ html[data-theme="light"] #sceneGlow{opacity:.45}
   <div class="modal-head"><h3>🔑 API 接入</h3><button class="modal-close" data-close="modalApi">✕</button></div>
   <div class="modal-body">
     <div class="field">
-      <label>配置存档 <span class="opt">三个档位独立保存，一键切换不同模型</span></label>
+      <label>配置存档 <span class="opt">三档独立保存 · 改名后自动记住</span></label>
       <div class="preset-grid" id="profileGrid"></div>
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <input type="text" id="profileName" maxlength="12" placeholder="给当前存档起个名（如：DeepSeek 主力 / GLM 剧本用）" style="flex:1;height:34px;padding:0 10px;font-size:12.5px;background:var(--surface-2);border:1px solid var(--border);border-radius:var(--r-sm);color:var(--text);outline:none">
+        <button type="button" class="btn ghost" id="renameProfileBtn" style="padding:0 12px;font-size:12px">记住这个名字</button>
+      </div>
     </div>
     <div class="field">
       <label>服务商预设</label>
@@ -1704,7 +1708,7 @@ function toast(msg, type){
  * 接入设置
  * ================================================================ */
 function renderPresetGrid(){
-  // 存档切换条（三档独立保存）
+  // 存档切换条（三档独立保存）+ 当前档改名
   const pg = $("#profileGrid");
   if(pg){
     pg.innerHTML = "";
@@ -1713,11 +1717,13 @@ function renderPresetGrid(){
       b.type = "button";
       b.className = "preset-btn" + (state.profileIdx === i ? " on" : "");
       const filled = p.key && p.model;
-      b.innerHTML = `${p.name}${filled ? ' <span style="opacity:.7">●</span>' : ''}`;
+      b.innerHTML = `${escapeHtml(p.name)}${filled ? ' <span style="opacity:.7">●</span>' : ''}`;
       b.title = filled ? `${PRESETS[p.preset]?.name || "自定义"} · ${p.model}` : "空存档";
       b.addEventListener("click", () => switchProfile(i));
       pg.appendChild(b);
     });
+    const pn = $("#profileName");
+    if(pn && document.activeElement !== pn) pn.value = state.profiles[state.profileIdx].name;
   }
   const grid = $("#presetGrid");
   grid.innerHTML = "";
@@ -1726,7 +1732,11 @@ function renderPresetGrid(){
     b.type = "button";
     b.className = "preset-btn" + (state.api.preset === k ? " on" : "");
     b.textContent = v.name;
-    b.addEventListener("click", () => { state.api.preset = k; syncPresetUI(); renderPresetGrid(); });
+    b.addEventListener("click", () => {
+      state.api.preset = k;
+      if(k !== "custom") state.api.base = PRESETS[k].base; // 预设地址即时同步，防止残留
+      syncPresetUI(); renderPresetGrid();
+    });
     grid.appendChild(b);
   }
   // 回复详细度三档
@@ -1757,63 +1767,65 @@ function syncPresetUI(){
   const p = state.api.preset;
   const preset = PRESETS[p];
   const baseInput = $("#apiBase"), modelInput = $("#apiModel"), modelDatalist = $("#modelList");
+  // 一切以 state.api 为准重绘表单——绝不信输入框里的残留值（防串档）
   if(p === "custom"){
     baseInput.disabled = false;
-    if(!baseInput.value) baseInput.value = state.api.base || "";
+    baseInput.value = state.api.base || "";
     baseInput.placeholder = "https://…/v1（OpenAI 兼容地址）";
   }else{
     baseInput.disabled = true;
     baseInput.value = preset.base;
   }
   modelDatalist.innerHTML = (preset.models || []).map(m => `<option value="${m}">`).join("");
-  if(!modelInput.value || p !== "custom") modelInput.value = state.api.model || "";
+  modelInput.value = state.api.model || "";
 }
-function openApiModal(){
-  renderPresetGrid();
-  $("#apiBase").value = state.api.preset === "custom" ? (state.api.base || "") : PRESETS[state.api.preset].base;
+/** 表单完整重绘：所有字段都从 state.api 取值（打开弹窗/切换存档共用） */
+function fillApiForm(){
+  syncPresetUI();
   $("#apiKey").value = state.api.key || "";
-  $("#apiModel").value = state.api.model || "";
   $("#apiTemp").value = state.api.temp;
   $("#tempVal").textContent = Number(state.api.temp).toFixed(2);
   $("#apiMax").value = state.api.max;
   $("#rulesChk").checked = !!state.api.rulesOn;
-  openModal("modalApi");
+  renderDepthGrid();
 }
-/** 弹窗内切换存档：当前表单暂存回旧档，再载入目标档 */
-function switchProfile(idx){
-  if(idx === state.profileIdx) return;
-  // 收集当前表单 → 暂存旧档
-  state.api.preset = state.api.preset; // preset 由点击维护
+/** 收集表单 → 写回 state.api（切换存档暂存 / 保存共用） */
+function collectApiForm(){
+  state.api.preset = state.api.preset;
   state.api.base = state.api.preset === "custom" ? $("#apiBase").value.trim() : PRESETS[state.api.preset].base;
   state.api.key = $("#apiKey").value.trim();
   state.api.model = $("#apiModel").value.trim();
   state.api.temp = $("#apiTemp").value;
   state.api.max = +$("#apiMax").value || 1024;
   state.api.rulesOn = $("#rulesChk").checked;
+}
+function openApiModal(){
+  renderPresetGrid();
+  fillApiForm();
+  openModal("modalApi");
+}
+/** 弹窗内切换存档：当前表单暂存回旧档，再载入目标档（表单全字段重绘，防串档） */
+function switchProfile(idx){
+  if(idx === state.profileIdx) return;
+  collectApiForm();
   persistProfile();
   // 载入目标档
   state.profileIdx = idx;
   state.api = {...state.api, ...state.profiles[idx]};
   store.set("activeProfile", idx);
-  state.api.depth = state.profiles[idx].depth || "deep";
   renderPresetGrid();
-  syncPresetUI();
-  $("#apiKey").value = state.api.key || "";
-  $("#apiModel").value = state.api.model || "";
-  $("#apiTemp").value = state.api.temp;
-  $("#tempVal").textContent = Number(state.api.temp).toFixed(2);
-  $("#apiMax").value = state.api.max;
-  $("#rulesChk").checked = !!state.api.rulesOn;
+  fillApiForm();
   updateApiStatus();
-  toast(`已切换到「${state.profiles[idx].name}」——保存后生效`, "ok");
+  toast(`已切换到「${state.profiles[idx].name}」——记得点保存`, "ok");
 }
 function saveApiModal(){
-  state.api.base = state.api.preset === "custom" ? $("#apiBase").value.trim() : PRESETS[state.api.preset].base;
-  state.api.key = $("#apiKey").value.trim();
-  state.api.model = $("#apiModel").value.trim();
-  state.api.temp = $("#apiTemp").value;
-  state.api.max = +$("#apiMax").value || 1024;
-  state.api.rulesOn = $("#rulesChk").checked;
+  collectApiForm();
+  // 自定义存档名：改名框有值就记住它
+  const pn = $("#profileName");
+  if(pn){
+    const name = pn.value.trim();
+    if(name) state.profiles[state.profileIdx].name = name.slice(0, 12);
+  }
   saveApi(); persistProfile(); updateApiStatus(); renderChat();
   closeModal("modalApi");
   toast(`已保存到「${state.profiles[state.profileIdx].name}」`, "ok");
@@ -1974,7 +1986,7 @@ function saveMemo(){
  * 备份迁移
  * ================================================================ */
 function doExportData(){
-  const dump = { v:1, exportedAt: nowTs(), chars: state.chars, sessions: state.sessions, api: state.api };
+  const dump = { v:2, exportedAt: nowTs(), chars: state.chars, sessions: state.sessions, api: state.api, profiles: state.profiles, profileIdx: state.profileIdx };
   const blob = new Blob([JSON.stringify(dump, null, 2)], {type:"application/json"});
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
@@ -1989,8 +2001,11 @@ function doImportData(file){
       if(!d.chars || !d.sessions) throw new Error("格式不对");
       confirmBox("导入确认", "导入会<b>覆盖</b>当前全部数据，确定吗？", () => {
         state.chars = d.chars; state.sessions = d.sessions;
-        if(d.api) state.api = { ...state.api, ...d.api };
-        saveChars(); saveSessions(); saveApi();
+        if(d.profiles){ state.profiles = d.profiles; store.set("profiles", state.profiles); }
+        if(typeof d.profileIdx === "number"){ state.profileIdx = d.profileIdx; store.set("activeProfile", state.profileIdx); }
+        state.api = {...state.api, ...state.profiles[state.profileIdx], ...(d.api || {})};
+        saveApi();
+        saveChars(); saveSessions();
         loadState(); renderAll();
         closeModal("modalData");
         toast("导入完成，欢迎回来", "ok");
@@ -2087,6 +2102,16 @@ function bindEvents(){
   $("#tabSessions").addEventListener("click", () => switchTab("sess"));
   // 底部按钮
   $("#apiStatusBtn").addEventListener("click", openApiModal);
+  $("#renameProfileBtn").addEventListener("click", () => {
+    const pn = $("#profileName");
+    const name = pn.value.trim().slice(0, 12);
+    if(!name) return toast("先写个名字", "err");
+    state.profiles[state.profileIdx].name = name;
+    persistProfile();
+    renderPresetGrid();
+    updateApiStatus();
+    toast(`已记住：「${name}」`, "ok");
+  });
   $("#guideBtn").addEventListener("click", () => openModal("modalGuide"));
   $("#tempHelp").addEventListener("click", () => { closeModal("modalApi"); openModal("modalGuide"); });
   $("#themeBtn").addEventListener("click", toggleTheme);
