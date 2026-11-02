@@ -379,6 +379,41 @@ html[data-theme="light"] #sceneGlow{opacity:.45}
 .forge-status.show{display:flex}
 .forge-status .f-spin{width:14px;height:14px;border:2px solid var(--accent-line);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
+/* ============ 关于 / 打赏 / 玩法共建 ============ */
+#modalAbout{width:min(680px,94vw)}
+.abt-tabs{display:flex;gap:6px;padding:14px 22px 0;position:sticky;top:0;background:var(--surface);z-index:2}
+.abt-tab{flex:1;padding:9px 4px;border-radius:var(--r-md);font-size:13px;color:var(--text-3);border:1px solid transparent;transition:all var(--t-fast);white-space:nowrap}
+.abt-tab:hover{color:var(--text-2)}
+.abt-tab.on{color:var(--accent);background:var(--surface-2);border-color:var(--border)}
+.abt-body{padding:14px 22px 24px}
+.abt-pane{display:none;flex-direction:column;gap:14px}
+.abt-pane.on{display:flex}
+.abt-hero{display:flex;align-items:center;gap:14px}
+.abt-ava{width:56px;height:56px;border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:26px;background:var(--accent-soft);border:1px solid var(--accent-line);flex-shrink:0}
+.abt-hero h4{font-family:var(--serif);font-size:19px;letter-spacing:.5px}
+.abt-sub{font-size:12px;color:var(--text-3);margin-top:3px}
+.abt-text{font-size:13.5px;line-height:1.75;color:var(--text-2)}
+.abt-text em{font-style:normal;color:var(--accent)}
+.abt-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.abt-card{background:var(--surface-2);border:1px solid var(--border);border-radius:var(--r-md);padding:12px}
+.abt-card b{display:block;font-size:13px;margin-bottom:6px;color:var(--accent)}
+.abt-card span{font-size:11.5px;line-height:1.6;color:var(--text-3)}
+.abt-note{background:var(--accent-soft);border:1px solid var(--accent-line);border-radius:var(--r-md);padding:12px 14px;font-size:12.5px;line-height:1.75;color:var(--text-2)}
+.abt-note b{color:var(--accent)}
+.abt-contact{display:flex;flex-direction:column;gap:8px;font-size:13px}
+.abt-crow{display:flex;align-items:center;gap:10px;background:var(--surface-2);border:1px solid var(--border);border-radius:var(--r-md);padding:10px 12px}
+.abt-crow .k{color:var(--text-3);font-size:12px;width:52px;flex-shrink:0}
+.abt-crow .v{color:var(--text);font-size:13px;word-break:break-all}
+.abt-crow a.v{color:var(--accent);text-decoration:none}
+.abt-qr{display:flex;flex-direction:column;align-items:center;gap:8px}
+.abt-qr img{width:min(260px,72vw);height:auto;border-radius:var(--r-md);border:1px solid var(--border);background:#fff;padding:6px}
+.abt-qr small{font-size:11.5px;color:var(--text-3)}
+.abt-step{display:flex;gap:10px;background:var(--surface-2);border:1px solid var(--border);border-radius:var(--r-md);padding:11px 13px}
+.abt-step .n{width:22px;height:22px;flex-shrink:0;border-radius:50%;background:var(--accent-soft);color:var(--accent);font-size:12px;display:flex;align-items:center;justify-content:center;border:1px solid var(--accent-line)}
+.abt-step b{display:block;font-size:13px;margin-bottom:3px}
+.abt-step span{font-size:12px;line-height:1.6;color:var(--text-3)}
+.abt-actions{display:flex;gap:10px;flex-wrap:wrap}
+@media(max-width:560px){.abt-grid{grid-template-columns:1fr}.abt-tab{font-size:12px;padding:8px 2px}}
 </style>
 </head>
 <body>
@@ -402,6 +437,7 @@ html[data-theme="light"] #sceneGlow{opacity:.45}
       <button class="icon-btn-mini" id="dataBtn" title="备份 / 导入数据">⇅</button>
     </div>
     <button class="side-guide" id="guideBtn">📖 玩法指南</button>
+    <button class="side-guide" id="aboutBtn">🏮 关于 · 打赏 · 共建</button>
   </aside>
   <div id="drawerMask"></div>
 
@@ -706,6 +742,76 @@ html[data-theme="light"] #sceneGlow{opacity:.45}
       <button class="btn ghost" id="importDataBtn" style="flex:1">导入数据文件</button>
     </div>
     <input type="file" id="importFile" accept=".json" style="display:none">
+  </div>
+</div>
+
+
+<!-- ================= 关于开发者 / 打赏 / 玩法共建 ================= -->
+<div class="modal" id="modalAbout">
+  <div class="modal-head"><h3>🏮 关于 · 打赏 · 玩法共建</h3><button class="modal-close" data-close="modalAbout">✕</button></div>
+  <div class="abt-tabs">
+    <button class="abt-tab on" data-atab="dev">关于开发者</button>
+    <button class="abt-tab" data-atab="donate">打赏开发者</button>
+    <button class="abt-tab" data-atab="build">玩法共建</button>
+  </div>
+  <div class="modal-body abt-body">
+    <section class="abt-pane on" data-apane="dev">
+      <div class="abt-hero">
+        <div class="abt-ava">🏮</div>
+        <div><h4>阿z的知识讲堂</h4><p class="abt-sub">B 站 UP 主 · 独立开发者 · 数学 / 物理 / AI</p></div>
+      </div>
+      <p class="abt-text">白天想公式，晚上写代码。浮生角色馆、Echo Run、知弧、Principia 都是我一个人在业余时间做出来的小东西：<em>不接广告、不做充值、不保存你的对话</em>。用着顺手就好，用着不顺也欢迎来告诉我。</p>
+      <div class="abt-grid">
+        <div class="abt-card"><b>∑ 热爱数学</b><span>从高等数学到抽象代数，相信每个公式背后都有值得讲的故事。</span></div>
+        <div class="abt-card"><b>⚛ 热爱物理</b><span>痴迷于用最简洁的原理，描述最复杂的自然现象。</span></div>
+        <div class="abt-card"><b>◆ 热爱 AI</b><span>想把 AI 揉进教育与创作，让工具再顺手一点点。</span></div>
+      </div>
+      <div class="abt-note"><b>我的心愿：免费的关注，就是最大的鼓励。</b>如果这间小馆陪你熬过几个深夜，去 B 站点个关注就好；想打赏的话量力而行——喜欢白嫖，开发者也完全不介意。</div>
+      <div class="abt-contact">
+        <div class="abt-crow"><span class="k">微信</span><span class="v">见「玩法共建」页二维码</span></div>
+        <div class="abt-crow"><span class="k">B 站</span><span class="v">阿z的知识讲堂</span></div>
+        <div class="abt-crow"><span class="k">GitHub</span><a class="v" href="https://github.com/azdezhishijiangtang" target="_blank" rel="noopener">github.com/azdezhishijiangtang</a></div>
+      </div>
+      <div class="abt-actions">
+        <button class="btn ghost" data-atab="donate">打赏开发者</button>
+        <button class="btn ghost" data-atab="build">玩法共建</button>
+      </div>
+    </section>
+
+    <section class="abt-pane" data-apane="donate">
+      <p class="abt-text">创作不易。如果这个网站真的帮到了你，可以根据自身情况打赏——每一笔心意都会变成继续更新下去的理由。</p>
+      <div class="abt-qr">
+        <img src="images/donate-code.png" alt="开发者赞赏码" loading="eager">
+        <small>扫码打赏 · 金额随意</small>
+      </div>
+      <div class="abt-grid">
+        <div class="abt-card"><b>完全自愿</b><span>打不打赏、打多少，完全由你决定，请量力而行。</span></div>
+        <div class="abt-card"><b>白嫖也没关系</b><span>打赏不解锁任何内容，所有功能对所有人一样免费开放。</span></div>
+        <div class="abt-card"><b>关注也是支持</b><span>去 B 站关注「阿z的知识讲堂」，免费的关注同样是鼓励。</span></div>
+      </div>
+      <div class="abt-note">本站没有会员、没有充值、没有广告位。你的对话与密钥只存在自己的浏览器里，开发者看不到。</div>
+      <div class="abt-actions">
+        <button class="btn ghost" data-atab="dev">了解开发者</button>
+        <button class="btn ghost" data-atab="build">玩法共建</button>
+      </div>
+    </section>
+
+    <section class="abt-pane" data-apane="build">
+      <p class="abt-text">你想要什么新玩法？新的角色卡、剧情机制、记忆规则、界面小功能……只要有想法，就来跟我聊。一起把它做出来，<em>署上你的名字</em>，让所有来馆里的人都玩得到。</p>
+      <div class="abt-step"><span class="n">1</span><div><b>提出想法</b><span>扫码加微信，备注「玩法共建」，一句话说清你想要什么、为什么想加。</span></div></div>
+      <div class="abt-step"><span class="n">2</span><div><b>评估可行性</b><span>我判断技术难度、和你现有玩法是否打架、大概要多久，评估阶段完全免费。</span></div></div>
+      <div class="abt-step"><span class="n">3</span><div><b>一起打磨</b><span>达成一致后开工，中途给你看效果、按你的反馈改，直到你也满意。</span></div></div>
+      <div class="abt-step"><span class="n">4</span><div><b>上架共建</b><span>做好的玩法上线本站，标记为「共建功能」，署你的名字（也可以匿名）。</span></div></div>
+      <div class="abt-qr">
+        <img src="images/wechat-qr.png" alt="开发者微信二维码" loading="eager">
+        <small>扫码加我微信 · 备注「玩法共建」</small>
+      </div>
+      <div class="abt-note">被采纳的点子会免费开放给所有人，这是「共建」的意思；涉及大改版的定制开发属于个人技术服务，费用单独沟通。不接涉政涉黄、破坏平衡与侵权素材的需求。</div>
+      <div class="abt-actions">
+        <a class="btn ghost" href="https://github.com/azdezhishijiangtang/fusheng-roleplay/issues" target="_blank" rel="noopener" style="text-decoration:none;display:inline-flex;align-items:center">去 GitHub 提需求</a>
+        <button class="btn ghost" data-atab="dev">了解开发者</button>
+      </div>
+    </section>
   </div>
 </div>
 
@@ -2113,6 +2219,19 @@ function bindEvents(){
     toast(`已记住：「${name}」`, "ok");
   });
   $("#guideBtn").addEventListener("click", () => openModal("modalGuide"));
+/* ---------- 关于 / 打赏 / 玩法共建 ---------- */
+function aboutTab(name){
+  $$("#modalAbout .abt-tab").forEach(b => b.classList.toggle("on", b.dataset.atab === name));
+  $$("#modalAbout .abt-pane").forEach(p => p.classList.toggle("on", p.dataset.apane === name));
+  $("#modalAbout").scrollTop = 0;
+}
+
+$("#aboutBtn").addEventListener("click", () => { aboutTab("dev"); openModal("modalAbout"); });
+$("#modalAbout").addEventListener("click", e => {
+  const b = e.target.closest("[data-atab]");
+  if(b) aboutTab(b.dataset.atab);
+});
+
   $("#tempHelp").addEventListener("click", () => { closeModal("modalApi"); openModal("modalGuide"); });
   $("#themeBtn").addEventListener("click", toggleTheme);
   $("#dataBtn").addEventListener("click", () => openModal("modalData"));
