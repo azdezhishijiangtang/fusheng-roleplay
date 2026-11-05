@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html lang="zh-CN" data-theme="dark">
 <head>
+    <meta name="referrer" content="no-referrer" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval' 'sha256-r3O/KDXOH4/Dqh9pKOuuzGoY4OlAxKE91KlAxpS6pwY='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' https:; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-src 'none'" />
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="description" content="浮生角色馆 — 带上你的 API Key，来和有趣的角色彻夜长谈。">
@@ -617,9 +619,10 @@ html[data-theme="light"] #sceneGlow{opacity:.45}
       <input type="text" id="apiBase" placeholder="https://api.example.com/v1" spellcheck="false">
     </div>
     <div class="field">
-      <label>API Key <span class="opt">仅保存在你的浏览器 localStorage</span></label>
+      <label>API Key <span class="opt">默认仅存内存 · 刷新即消失 · 不落盘</span></label>
       <input type="password" id="apiKey" placeholder="sk-…" spellcheck="false" autocomplete="off">
     </div>
+    <div class="field" id="byokVaultControls"></div>
     <div class="field">
       <label>模型</label>
       <input type="text" id="apiModel" list="modelList" placeholder="gpt-4o / deepseek-chat / glm-4.6 …" spellcheck="false">
@@ -826,10 +829,11 @@ html[data-theme="light"] #sceneGlow{opacity:.45}
 </div>
 
 <div id="toast"></div>
+<script src="byok-vault.js"></script>
 <script>
 /* ================================================================
  * 浮生角色馆 · 前端逻辑
- * 数据全部存 localStorage；API 请求直连用户配置的服务商
+ * 学习数据存 localStorage；API Key 只存内存保险库，磁盘仅留句柄；请求直连用户配置的服务商
  * ================================================================ */
 "use strict";
 const $ = s => document.querySelector(s);
@@ -844,7 +848,11 @@ const fmtAgo = ts => { const m=(nowTs()-ts)/6e4; if(m<1)return"刚刚"; if(m<60)
 /* ---------- 持久化 ---------- */
 const store = {
   get(k, d){ try{ const v = localStorage.getItem("fs_" + k); return v ? JSON.parse(v) : d; }catch(e){ return d; } },
-  set(k, v){ try{ localStorage.setItem("fs_" + k, JSON.stringify(v)); }catch(e){ toast("存储空间不足，保存失败", "err"); } }
+  /* 写盘 replacer：任何名为 key 且非句柄的明文一律清空，密钥绝不落盘 */
+  set(k, v){ try{ localStorage.setItem("fs_" + k, JSON.stringify(v, (field, val) => {
+    if(field === "key" && typeof val === "string" && val.length > 0 && !ByokVault.isHandle(val)) return "";
+    return val;
+  })); }catch(e){ toast("存储空间不足，保存失败", "err"); } }
 };
 
 /* ---------- API 预设 ---------- */
@@ -1168,6 +1176,18 @@ function loadState(){
     if(oldApi.key || oldApi.model) Object.assign(state.profiles[0], oldApi);
   }
   state.profileIdx = store.get("activeProfile", 0);
+  // 升级迁移：把旧版明文密钥搬进内存保险库，存档里只留句柄，并立刻覆写磁盘
+  state.profiles.forEach((p, i) => {
+    if(p && p.key && !ByokVault.isHandle(p.key)){
+      ByokVault.set("fs-profile-" + i, p.key);
+      p.key = ByokVault.handleFor("fs-profile-" + i);
+    }
+  });
+  const legacyKey = (store.get("api", {}) || {}).key;
+  if(legacyKey && !ByokVault.isHandle(legacyKey)){
+    ByokVault.set("fs-profile-0", legacyKey);
+    if(state.profiles[0]) state.profiles[0].key = ByokVault.handleFor("fs-profile-0");
+  }
   state.api = {...state.api, ...state.profiles[state.profileIdx]};
   store.set("profiles", state.profiles);
   store.set("activeProfile", state.profileIdx);
@@ -1594,9 +1614,9 @@ async function streamChat(messages, onDelta){
   };
   const ctrl = new AbortController();
   state.ctrl = ctrl;
-  const res = await fetch(url, {
+  const res = await ByokVault.secureFetch(url, {
     method: "POST",
-    headers: { "Content-Type": "application/json", "Authorization": "Bearer " + state.api.key },
+    headers: { "Content-Type": "application/json", "Authorization": ByokVault.authHeaders(state.api.key).Authorization },
     body: JSON.stringify(body),
     signal: ctrl.signal
   });
@@ -1898,7 +1918,7 @@ function syncPresetUI(){
 /** 表单完整重绘：所有字段都从 state.api 取值（打开弹窗/切换存档共用） */
 function fillApiForm(){
   syncPresetUI();
-  $("#apiKey").value = state.api.key || "";
+  $("#apiKey").value = ByokVault.isHandle(state.api.key) ? "" : (state.api.key || "");
   $("#apiTemp").value = state.api.temp;
   $("#tempVal").textContent = Number(state.api.temp).toFixed(2);
   $("#apiMax").value = state.api.max;
@@ -1909,7 +1929,13 @@ function fillApiForm(){
 function collectApiForm(){
   state.api.preset = state.api.preset;
   state.api.base = state.api.preset === "custom" ? $("#apiBase").value.trim() : PRESETS[state.api.preset].base;
-  state.api.key = $("#apiKey").value.trim();
+  const typedKey = $("#apiKey").value.trim();
+  if(typedKey && !ByokVault.isHandle(typedKey)){
+    ByokVault.set("fs-profile-" + state.profileIdx, typedKey);
+    state.api.key = ByokVault.handleFor("fs-profile-" + state.profileIdx);
+  } else if(typedKey && ByokVault.isHandle(typedKey)){
+    state.api.key = typedKey;
+  }
   state.api.model = $("#apiModel").value.trim();
   state.api.temp = $("#apiTemp").value;
   state.api.max = +$("#apiMax").value || 1024;
@@ -1961,9 +1987,12 @@ async function testConnection(){
   if(!probe.model) return toast("填一个模型名", "err");
   btn.disabled = true; btn.textContent = "测试中…";
   try{
-    const res = await fetch(probe.base.replace(/\/+$/,"") + "/chat/completions", {
+    const probeAuth = ByokVault.isHandle(probe.key)
+      ? ByokVault.authHeaders(probe.key).Authorization
+      : "Bearer " + probe.key;
+    const res = await ByokVault.secureFetch(probe.base.replace(/\/+$/,"") + "/chat/completions", {
       method:"POST",
-      headers:{ "Content-Type":"application/json", "Authorization":"Bearer " + probe.key },
+      headers:{ "Content-Type":"application/json", "Authorization": probeAuth },
       body: JSON.stringify({ model: probe.model, messages:[{role:"user",content:"回复「通」一个字即可"}], max_tokens: 8 })
     });
     if(res.ok){ toast("连接成功，模型有回应 ✓", "ok"); }
@@ -2102,7 +2131,8 @@ function saveMemo(){
  * 备份迁移
  * ================================================================ */
 function doExportData(){
-  const dump = { v:2, exportedAt: nowTs(), chars: state.chars, sessions: state.sessions, api: state.api, profiles: state.profiles, profileIdx: state.profileIdx };
+  const dump = { v:2, exportedAt: nowTs(), chars: state.chars, sessions: state.sessions,
+    api: {...state.api, key:""}, profiles: state.profiles.map(p => ({...p, key:""})), profileIdx: state.profileIdx };
   const blob = new Blob([JSON.stringify(dump, null, 2)], {type:"application/json"});
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
@@ -2522,6 +2552,7 @@ function rollDice(){
 }
 
 loadState();
+ByokVault.mountVaultControls(document.getElementById("byokVaultControls"));
 switchTab(state.sideTab);
 bindEvents();
 renderAll();
