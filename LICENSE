@@ -1,21 +1,44 @@
-MIT License
+# 版权与使用限制声明 / Copyright & Usage Restriction Notice
 
-Copyright (c) 2026 azdezhishijiangtang
+Copyright © 2026 azdezhishijiangtang（GitHub: [@azdezhishijiangtang](https://github.com/azdezhishijiangtang)）
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+**保留所有权利 / All Rights Reserved**
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+---
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+## 一、中文声明
+
+本仓库中的全部内容——包括但不限于源代码、脚本、配置、文档、笔记、图片、数据及其他任何形式的作品——均由 azdezhishijiangtang 原创或合法持有，其著作权及相关一切权利归 azdezhishijiangtang 所有。
+
+自本声明发布之日起，未经作者事先书面许可，任何人不得实施以下行为：
+
+1. **禁止复制 / 禁止传播**：不得以任何方式复制、转载、摘编、截图、克隆、镜像、上传网盘或以公开、私下任何渠道分发本仓库的全部或部分内容。
+
+2. **禁止拿去使用**：不得将本仓库的全部或部分内容（含其修改版本、衍生版本）用于自己或第三方的任何项目、作业、文章、视频、产品或其他成果，无论商业或非商业用途。
+
+3. **禁止牟利**：严禁出售、付费分享、打包倒卖或以任何形式利用本仓库内容牟利。
+
+4. **禁止篡改声明**：不得删除、遮盖或修改内容中的版权标识、作者署名及本声明文件。
+
+5. **保留所有权利**：本仓库不采用任何开源许可证（不适用 MIT / GPL / Apache-2.0 等任何协议），未向任何人授予任何默认使用许可。
+
+如确有使用需求，请通过 GitHub（[@azdezhishijiangtang](https://github.com/azdezhishijiangtang) 的 Issues 或私信）联系作者，取得**事先书面授权**后方可按授权范围使用。
+
+## 二、English Notice
+
+Copyright © 2026 azdezhishijiangtang. All rights reserved.
+
+1. **No copying or redistribution** — Do not copy, reproduce, repost, mirror, re-upload, or share any part of this repository (code, documents, images, data, etc.) through any channel, public or private, without the author's prior written permission.
+2. **No reuse** — Do not use any content from this repository (including modified or derived versions) in your own or any third party's projects, coursework, articles, videos, products, or other works, whether commercial or non-commercial.
+3. **No commercial exploitation** — Selling, pay-walling, repackaging, or profiting from this content in any form is strictly prohibited.
+4. **Do not remove this notice** — Copyright marks, author attribution, and this notice must not be removed or altered.
+5. **All rights reserved** — This repository is NOT open source. No open-source license (MIT, GPL, Apache-2.0, or any other) applies, and no usage right is granted by default.
+
+For licensing requests, contact the author via GitHub (@azdezhishijiangtang) and obtain prior written permission.
+
+---
+
+*本声明适用于本仓库全部内容，自提交之时生效。*
+*This notice applies to all content in this repository and takes effect upon submission.*
+
+*声明日期 / Notice date: 2026-11-05*
