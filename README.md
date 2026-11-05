@@ -66,7 +66,3 @@ A character card is just structured text. This is the actual format used by the 
 ```
 
 The shared performance rules (roleplay constitution) are prepended automatically. Every reply, the model receives: rules + persona + your plot memo + example dialogues + recent history.
-
-## License
-
-MIT
