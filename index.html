@@ -5,7 +5,7 @@
   <!-- ⚠️ 本页内联脚本受下方 CSP 的 sha256 锁定：任何对内联脚本内容的改动都
        必须同步更新哈希，否则浏览器会拒绝执行整段脚本（表现为所有浏览器都打不开）。
        校验命令：node scripts/verify-csp.mjs -->
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval' 'sha256-VAYNNNyB+DzaIc8vrIeVSkuDWP3CWzSGuimchincMU0='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' https:; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-src 'none'" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval' 'sha256-Wk7FxKgoifLOogmrNsaSktvuhMrUlLJKpE/hXxpt9sI='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' https:; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-src 'none'" />
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="description" content="浮生角色馆 — 带上你的 API Key，来和有趣的角色彻夜长谈。">
@@ -1659,26 +1659,31 @@ async function streamChat(messages, onDelta){
     const reader = res.body.getReader();
     const decoder = new TextDecoder();
     let buf = "", full = "";
+    // 只忽略「JSON 不完整」的分包行；服务端业务错误必须原样抛出
+    const handleLine = (t) => {
+      if(!t.startsWith("data:")) return;
+      const data = t.slice(5).trim();
+      if(!data || data === "[DONE]") return;
+      let j;
+      try{ j = JSON.parse(data); }catch(e){ return; }
+      if(j.error && j.error.message) throw new Error(j.error.message);
+      const ch = j.choices && j.choices[0];
+      const d = ch && (ch.delta || ch.message);
+      const piece = (d && d.content) || "";
+      if(piece){ full += piece; onDelta(piece, full); }
+    };
     while(true){
       const { done, value } = await reader.read();
       if(done) break;
       armIdle();  // 收到新数据，重新计时
       buf += decoder.decode(value, { stream:true });
       const lines = buf.split("\n");
-      buf = lines.pop();
-      for(const line of lines){
-        const t = line.trim();
-        if(!t.startsWith("data:")) continue;
-        const data = t.slice(5).trim();
-        if(data === "[DONE]") continue;
-        try{
-          const j = JSON.parse(data);
-          const d = j.choices?.[0]?.delta;
-          const piece = d?.content || "";
-          if(piece){ full += piece; onDelta(piece, full); }
-        }catch(e){ /* 忽略不完整行 */ }
-      }
+      buf = lines.pop() || "";
+      for(const line of lines) handleLine(line.trim());
     }
+    // 流结束：flush 解码器残留字节，并处理最后一条未以换行结尾的 SSE 行
+    buf += decoder.decode();
+    if(buf.trim()) handleLine(buf.trim());
     return full;
   }catch(e){
     // 超时触发的是 AbortError，转换成明确提示，避免被上层误判为「用户主动停止」
@@ -1950,7 +1955,7 @@ function syncPresetUI(){
     baseInput.disabled = true;
     baseInput.value = preset.base;
   }
-  modelDatalist.innerHTML = (preset.models || []).map(m => `<option value="${m}">`).join("");
+  modelDatalist.innerHTML = (preset.models || []).map(m => `<option value="${escapeHtml(m)}">`).join("");
   modelInput.value = state.api.model || "";
 }
 /** 表单完整重绘：所有字段都从 state.api 取值（打开弹窗/切换存档共用） */

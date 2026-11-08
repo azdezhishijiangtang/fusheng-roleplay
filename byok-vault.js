@@ -50,7 +50,7 @@
   }
   function randomBytes(n) { return global.crypto.getRandomValues(new Uint8Array(n)); }
   function deriveKey(pass, salt, iterations) {
-    return subtle().importKey('raw', new TextEncoder().encode(pass), 'PBKDF2', false, ['deriveKey'])
+    return subtle().importKey('raw', encodeUtf8(pass), 'PBKDF2', false, ['deriveKey'])
       .then(function (base) {
         return subtle().deriveKey(
           { name: 'PBKDF2', salt: salt, iterations: iterations, hash: 'SHA-256' },
@@ -123,7 +123,7 @@
     var obj = {}; memory.forEach(function (v, k) { obj[k] = v; });
     return deriveKey(pass, salt, ITER).then(function (key) {
       return subtle().encrypt(
-        { name: 'AES-GCM', iv: iv }, key, new TextEncoder().encode(JSON.stringify(obj))
+        { name: 'AES-GCM', iv: iv }, key, encodeUtf8(JSON.stringify(obj))
       );
     }).then(function (ct) {
       var blob = {
@@ -148,7 +148,7 @@
         return subtle().decrypt({ name: 'AES-GCM', iv: fromB64(blob.iv) }, key, fromB64(blob.ct));
       })
       .then(function (pt) {
-        var obj = JSON.parse(new TextDecoder().decode(pt));
+        var obj = JSON.parse(decodeUtf8(new Uint8Array(pt)));
         var restored = new Map();
         Object.keys(obj).forEach(function (k) {
           if (typeof obj[k] === 'string' && obj[k].length > 0) restored.set(k, obj[k]);
@@ -175,7 +175,7 @@
   function fingerprint(slot) {
     var key = memory.get(slotOf(slot));
     if (!key) return Promise.resolve(null);
-    return subtle().digest('SHA-256', new TextEncoder().encode(key)).then(function (d) {
+    return subtle().digest('SHA-256', encodeUtf8(key)).then(function (d) {
       return Array.from(new Uint8Array(d).slice(0, 4))
         .map(function (b) { return b.toString(16).padStart(2, '0'); }).join('');
     });
@@ -210,7 +210,8 @@
     xhr: typeof XMLHttpRequest !== 'undefined',
     abort: typeof AbortController !== 'undefined',
     readableStream: typeof ReadableStream !== 'undefined',
-    textDecoder: typeof TextDecoder !== 'undefined'
+    textDecoder: typeof TextDecoder !== 'undefined',
+    textEncoder: typeof TextEncoder !== 'undefined'
   };
   if (!caps.abort) {
     function LegacyAbortController() {
@@ -252,6 +253,26 @@
       if (d && d !== '[DONE]') out.push(d);
     });
     return out;
+  }
+  /** TextEncoder 缺失时的 UTF-8 兜底编码（含 4 字节字符与代理对） */
+  function encodeUtf8(text) {
+    if (caps.textEncoder) return new TextEncoder().encode(text);
+    var out = [], i = 0, cp, low;
+    for (i = 0; i < text.length; i++) {
+      cp = text.charCodeAt(i);
+      if (cp >= 0xd800 && cp <= 0xdbff && i + 1 < text.length) {
+        low = text.charCodeAt(i + 1);
+        if (low >= 0xdc00 && low <= 0xdfff) {
+          cp = 0x10000 + ((cp - 0xd800) << 10) + (low - 0xdc00);
+          i++;
+        }
+      }
+      if (cp < 0x80) out.push(cp);
+      else if (cp < 0x800) out.push(0xc0 | (cp >> 6), 0x80 | (cp & 0x3f));
+      else if (cp < 0x10000) out.push(0xe0 | (cp >> 12), 0x80 | ((cp >> 6) & 0x3f), 0x80 | (cp & 0x3f));
+      else out.push(0xf0 | (cp >> 18), 0x80 | ((cp >> 12) & 0x3f), 0x80 | ((cp >> 6) & 0x3f), 0x80 | (cp & 0x3f));
+    }
+    return new Uint8Array(out);
   }
   function decodeUtf8(bytes) {
     if (caps.textDecoder) return new TextDecoder().decode(bytes);
@@ -412,7 +433,7 @@
     assertSecureEndpoint: assertSecureEndpoint, authHeaders: authHeaders,
     secureFetch: secureFetch, redact: redact,
     caps: caps, canReadStream: canReadStream, readResponseText: readResponseText,
-    parsePayloads: parsePayloads, decodeUtf8: decodeUtf8,
+    parsePayloads: parsePayloads, decodeUtf8: decodeUtf8, encodeUtf8: encodeUtf8,
     HANDLE_PREFIX: HANDLE_PREFIX, handleFor: handleFor, isHandle: isHandle, slotOf: slotOf,
     mountVaultControls: mountVaultControls
   };
