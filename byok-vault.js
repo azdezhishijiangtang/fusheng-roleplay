@@ -200,12 +200,126 @@
     if (!key) throw new Error('密钥已锁定，请在设置中重新输入 API Key。');
     return { Authorization: 'Bearer ' + key };
   }
+  /* ================================================================
+   * 浏览器兼容层：只做特性检测，不解析 UA（国产/定制内核 UA 千变万化）
+   * 覆盖：ReadableStream / TextDecoder / AbortController / fetch 缺失，
+   *       以及流式响应不支持时的一次性读取回退。
+   * ================================================================ */
+  var caps = {
+    fetch: typeof fetch === 'function',
+    xhr: typeof XMLHttpRequest !== 'undefined',
+    abort: typeof AbortController !== 'undefined',
+    readableStream: typeof ReadableStream !== 'undefined',
+    textDecoder: typeof TextDecoder !== 'undefined'
+  };
+  if (!caps.abort) {
+    function LegacyAbortController() {
+      var self = this;
+      this.signal = {
+        aborted: false, onabort: null,
+        addEventListener: function () {}, removeEventListener: function () {},
+        dispatchEvent: function () { return false; }
+      };
+      this.abort = function () {
+        self.signal.aborted = true;
+        if (typeof self.signal.onabort === 'function') {
+          try { self.signal.onabort(); } catch (e) {}
+        }
+      };
+    }
+    global.AbortController = LegacyAbortController;
+  }
+  function canReadStream(res) {
+    if (!caps.readableStream || !caps.textDecoder) return false;
+    return !!(res && res.body && typeof res.body.getReader === 'function');
+  }
+  function readResponseText(res) {
+    if (res && typeof res.text === 'function') {
+      try { return res.text(); } catch (e) {}
+    }
+    return Promise.resolve((res && res._compatText) || '');
+  }
+  function parsePayloads(text) {
+    var src = text || '';
+    var trimmed = src.replace(/^\s+|\s+$/g, '');
+    if (!trimmed) return [];
+    if (trimmed.charAt(0) === '{' || trimmed.charAt(0) === '[') return [trimmed];
+    var out = [];
+    src.split(/\r?\n/).forEach(function (raw) {
+      var line = raw.replace(/^\s+|\s+$/g, '');
+      if (line.indexOf('data:') !== 0) return;
+      var d = line.slice(5).replace(/^\s+|\s+$/g, '');
+      if (d && d !== '[DONE]') out.push(d);
+    });
+    return out;
+  }
+  function decodeUtf8(bytes) {
+    if (caps.textDecoder) return new TextDecoder().decode(bytes);
+    var out = '', i = 0;
+    while (i < bytes.length) {
+      var b = bytes[i];
+      if (b < 0x80) { out += String.fromCharCode(b); i++; continue; }
+      var n = 0, cp = 0;
+      if (b >= 0xc0 && b < 0xe0) { n = 2; cp = b & 0x1f; }
+      else if (b >= 0xe0 && b < 0xf0) { n = 3; cp = b & 0x0f; }
+      else if (b >= 0xf0 && b < 0xf8) { n = 4; cp = b & 0x07; }
+      else { out += '\ufffd'; i++; continue; }
+      if (i + n > bytes.length) { out += '\ufffd'; break; }
+      for (var k = 1; k < n; k++) cp = (cp << 6) | (bytes[i + k] & 0x3f);
+      i += n;
+      if (cp > 0xffff) { cp -= 0x10000; out += String.fromCharCode(0xd800 + (cp >> 10), 0xdc00 + (cp & 0x3ff)); }
+      else out += String.fromCharCode(cp);
+    }
+    return out;
+  }
+  function legacyFetch(url, init) {
+    return new Promise(function (resolve, reject) {
+      if (!caps.xhr) { reject(new Error('当前浏览器缺少 fetch 与 XMLHttpRequest，请升级系统浏览器后重试。')); return; }
+      try {
+        var xhr = new XMLHttpRequest();
+        xhr.open(init.method || 'GET', url, true);
+        if (init.headers && typeof init.headers === 'object') {
+          Object.keys(init.headers).forEach(function (k) {
+            try { xhr.setRequestHeader(k, init.headers[k]); } catch (e) {}
+          });
+        }
+        xhr.timeout = 45000;
+        xhr.onload = function () {
+          var text = xhr.responseText || '';
+          resolve({
+            ok: xhr.status >= 200 && xhr.status < 300,
+            status: xhr.status, statusText: xhr.statusText, body: null,
+            headers: { get: function (n) { return xhr.getResponseHeader(n); } },
+            json: function () { return Promise.resolve(JSON.parse(text)); },
+            text: function () { return Promise.resolve(text); },
+            clone: function () { return this; },
+            _compatText: text
+          });
+        };
+        xhr.onerror = function () { reject(new Error('网络请求失败：请检查接口地址、网络，以及服务商是否允许浏览器跨域（CORS）。')); };
+        xhr.ontimeout = function () { reject(new Error('连接超时（45 秒）：请检查接口地址与网络。')); };
+        xhr.send(init.body || null);
+      } catch (e) { reject(e); }
+    });
+  }
   function secureFetch(url, init) {
     init = init || {};
-    return fetch(assertSecureEndpoint(url), {
-      method: init.method, headers: init.headers, body: init.body, signal: init.signal,
+    var target = assertSecureEndpoint(url);
+    if (!caps.fetch) return legacyFetch(target, init);
+    var opts = {
+      method: init.method, headers: init.headers, body: init.body,
       credentials: 'omit', referrerPolicy: 'no-referrer', cache: 'no-store'
-    });
+    };
+    if (caps.abort && init.signal) opts.signal = init.signal;
+    if (!caps.abort) {
+      return Promise.race([
+        fetch(target, opts),
+        new Promise(function (_, reject) {
+          setTimeout(function () { reject(new Error('连接超时（45 秒）：请检查接口地址与网络。')); }, 45000);
+        })
+      ]);
+    }
+    return fetch(target, opts);
   }
   var SENSITIVE = /(apikey|api_key|passphrase|password|secret|token|pat|authorization|bearer)/i;
   function redact(value) {
@@ -297,6 +411,8 @@
     subscribe: subscribe, fingerprint: fingerprint, mask: mask,
     assertSecureEndpoint: assertSecureEndpoint, authHeaders: authHeaders,
     secureFetch: secureFetch, redact: redact,
+    caps: caps, canReadStream: canReadStream, readResponseText: readResponseText,
+    parsePayloads: parsePayloads, decodeUtf8: decodeUtf8,
     HANDLE_PREFIX: HANDLE_PREFIX, handleFor: handleFor, isHandle: isHandle, slotOf: slotOf,
     mountVaultControls: mountVaultControls
   };

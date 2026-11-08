@@ -2,7 +2,10 @@
 <html lang="zh-CN" data-theme="dark">
 <head>
     <meta name="referrer" content="no-referrer" />
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval' 'sha256-r3O/KDXOH4/Dqh9pKOuuzGoY4OlAxKE91KlAxpS6pwY='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' https:; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-src 'none'" />
+  <!-- ⚠️ 本页内联脚本受下方 CSP 的 sha256 锁定：任何对内联脚本内容的改动都
+       必须同步更新哈希，否则浏览器会拒绝执行整段脚本（表现为所有浏览器都打不开）。
+       校验命令：node scripts/verify-csp.mjs -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval' 'sha256-VAYNNNyB+DzaIc8vrIeVSkuDWP3CWzSGuimchincMU0='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' https:; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-src 'none'" />
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="description" content="浮生角色馆 — 带上你的 API Key，来和有趣的角色彻夜长谈。">
@@ -1636,6 +1639,22 @@ async function streamChat(messages, onDelta){
       try{ const j = await res.json(); detail = j.error?.message || JSON.stringify(j).slice(0, 200); }
       catch(e){ detail = await res.text().catch(()=>""); }
       throw new Error(`HTTP ${res.status} · ${detail || res.statusText}`);
+    }
+    if(!ByokVault.canReadStream(res)){
+      // 流式不可用（iOS Safari 旧版 / 部分定制 WebView / XHR 兜底）：
+      // 一次性读回完整响应，兼容 SSE 文本与服务商直接返回的完整 JSON。
+      const payloads = ByokVault.parsePayloads(await ByokVault.readResponseText(res));
+      let acc = "";
+      for(const payload of payloads){
+        try{
+          const j = JSON.parse(payload);
+          const ch = j && j.choices && j.choices[0];
+          const d = ch && (ch.delta || ch.message);
+          const piece = (d && d.content) || "";
+          if(piece){ acc += piece; onDelta(piece, acc); }
+        }catch(e){ /* 忽略不完整行 */ }
+      }
+      return acc;
     }
     const reader = res.body.getReader();
     const decoder = new TextDecoder();
