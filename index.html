@@ -1320,7 +1320,7 @@ function msgNode(sess, m, idx){
     ? `<button data-op="edit" data-i="${idx}" title="编辑后重新生成">✎ 编辑</button><button data-op="del" data-i="${idx}" title="删除">🗑 删除</button>`
     : `<button data-op="copy" data-i="${idx}" title="复制">⧉ 复制</button><button data-op="regen" data-i="${idx}" title="重新生成这条回复">↺ 重写</button><button data-op="cont" data-i="${idx}" title="让她继续说">▶ 继续</button><button data-op="del" data-i="${idx}" title="删除">🗑</button>`;
   const bubbleInner = m.err
-    ? `<div class="err-box">请求出错了：${escapeHtml(m.errMsg || "未知错误")}<br><span class="err-tip">检查 Key / 模型名 / 网络；若被跨域拦截，请换支持 CORS 的服务商地址或本地中转。</span><div style="margin-top:8px"><button class="chip" data-op="regen" data-i="${idx}" style="color:var(--danger);border-color:var(--danger)">↺ 重试</button></div></div>`
+    ? `<div class="err-box">请求出错了：${escapeHtml(m.errMsg || "未知错误")}<br><span class="err-tip">请检查 Key / 模型名 / 接口地址与网络；仅当控制台确有 CORS 报错时才需更换跨域地址或本地中转。</span><div style="margin-top:8px"><button class="chip" data-op="regen" data-i="${idx}" style="color:var(--danger);border-color:var(--danger)">↺ 重试</button></div></div>`
     : renderRich(m.content);
   div.innerHTML = `
     ${av}
@@ -1614,41 +1614,60 @@ async function streamChat(messages, onDelta){
   };
   const ctrl = new AbortController();
   state.ctrl = ctrl;
-  const res = await ByokVault.secureFetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", "Authorization": ByokVault.authHeaders(state.api.key).Authorization },
-    body: JSON.stringify(body),
-    signal: ctrl.signal
-  });
-  if(!res.ok){
-    let detail = "";
-    try{ const j = await res.json(); detail = j.error?.message || JSON.stringify(j).slice(0, 200); }
-    catch(e){ detail = await res.text().catch(()=>""); }
-    throw new Error(`HTTP ${res.status} · ${detail || res.statusText}`);
-  }
-  const reader = res.body.getReader();
-  const decoder = new TextDecoder();
-  let buf = "", full = "";
-  while(true){
-    const { done, value } = await reader.read();
-    if(done) break;
-    buf += decoder.decode(value, { stream:true });
-    const lines = buf.split("\n");
-    buf = lines.pop();
-    for(const line of lines){
-      const t = line.trim();
-      if(!t.startsWith("data:")) continue;
-      const data = t.slice(5).trim();
-      if(data === "[DONE]") continue;
-      try{
-        const j = JSON.parse(data);
-        const d = j.choices?.[0]?.delta;
-        const piece = d?.content || "";
-        if(piece){ full += piece; onDelta(piece, full); }
-      }catch(e){ /* 忽略不完整行 */ }
+  // 45 秒「空闲超时」：只在迟迟收不到数据时触发，长回复不会被误杀。
+  // 用 AbortController + setTimeout 而非 AbortSignal.timeout，兼容旧版 Android WebView。
+  const IDLE_MS = 45000;
+  let timedOut = false;
+  let idleTimer = null;
+  const armIdle = () => {
+    if(idleTimer) clearTimeout(idleTimer);
+    idleTimer = setTimeout(() => { timedOut = true; ctrl.abort(); }, IDLE_MS);
+  };
+  armIdle();
+  try{
+    const res = await ByokVault.secureFetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Authorization": ByokVault.authHeaders(state.api.key).Authorization },
+      body: JSON.stringify(body),
+      signal: ctrl.signal
+    });
+    if(!res.ok){
+      let detail = "";
+      try{ const j = await res.json(); detail = j.error?.message || JSON.stringify(j).slice(0, 200); }
+      catch(e){ detail = await res.text().catch(()=>""); }
+      throw new Error(`HTTP ${res.status} · ${detail || res.statusText}`);
     }
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buf = "", full = "";
+    while(true){
+      const { done, value } = await reader.read();
+      if(done) break;
+      armIdle();  // 收到新数据，重新计时
+      buf += decoder.decode(value, { stream:true });
+      const lines = buf.split("\n");
+      buf = lines.pop();
+      for(const line of lines){
+        const t = line.trim();
+        if(!t.startsWith("data:")) continue;
+        const data = t.slice(5).trim();
+        if(data === "[DONE]") continue;
+        try{
+          const j = JSON.parse(data);
+          const d = j.choices?.[0]?.delta;
+          const piece = d?.content || "";
+          if(piece){ full += piece; onDelta(piece, full); }
+        }catch(e){ /* 忽略不完整行 */ }
+      }
+    }
+    return full;
+  }catch(e){
+    // 超时触发的是 AbortError，转换成明确提示，避免被上层误判为「用户主动停止」
+    if(timedOut) throw new Error("连接超时（45 秒未收到新数据）：接口无响应或网络过慢，请检查接口地址与网络。");
+    throw e;
+  }finally{
+    if(idleTimer) clearTimeout(idleTimer);
   }
-  return full;
 }
 
 /* ================================================================
@@ -1986,6 +2005,9 @@ async function testConnection(){
   if(probe.preset === "custom" && !probe.base) return toast("自定义接入需要填接口地址", "err");
   if(!probe.model) return toast("填一个模型名", "err");
   btn.disabled = true; btn.textContent = "测试中…";
+  const probeCtrl = new AbortController();
+  let probeTimedOut = false;
+  const probeTimer = setTimeout(() => { probeTimedOut = true; probeCtrl.abort(); }, 15000);
   try{
     const probeAuth = ByokVault.isHandle(probe.key)
       ? ByokVault.authHeaders(probe.key).Authorization
@@ -1993,7 +2015,8 @@ async function testConnection(){
     const res = await ByokVault.secureFetch(probe.base.replace(/\/+$/,"") + "/chat/completions", {
       method:"POST",
       headers:{ "Content-Type":"application/json", "Authorization": probeAuth },
-      body: JSON.stringify({ model: probe.model, messages:[{role:"user",content:"回复「通」一个字即可"}], max_tokens: 8 })
+      body: JSON.stringify({ model: probe.model, messages:[{role:"user",content:"回复「通」一个字即可"}], max_tokens: 8 }),
+      signal: probeCtrl.signal
     });
     if(res.ok){ toast("连接成功，模型有回应 ✓", "ok"); }
     else{
@@ -2002,7 +2025,10 @@ async function testConnection(){
       toast("连接失败：" + msg, "err");
     }
   }catch(e){
-    toast("网络错误：" + e.message + "（若为跨域拦截，请换支持 CORS 的官方地址或本地中转）", "err");
+    if(probeTimedOut) toast("连接超时（15 秒）：接口无响应或网络过慢，请检查接口地址与网络。", "err");
+    else toast("网络错误：" + e.message + "（仅当控制台确有 CORS 报错时才需更换跨域地址或本地中转）", "err");
+  }finally{
+    clearTimeout(probeTimer);
   }
   btn.disabled = false; btn.textContent = "测试连接";
 }
