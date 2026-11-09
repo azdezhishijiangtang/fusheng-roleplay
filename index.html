@@ -5,7 +5,7 @@
   <!-- ⚠️ 本页内联脚本受下方 CSP 的 sha256 锁定：任何对内联脚本内容的改动都
        必须同步更新哈希，否则浏览器会拒绝执行整段脚本（表现为所有浏览器都打不开）。
        校验命令：node scripts/verify-csp.mjs -->
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval' 'sha256-vVtcS/jhTyy/5wQre1NT5qVdD2yZ2You0CzBXUFVrCA='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' https:; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-src 'none'" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval' 'sha256-QodP1LyQDv7aPAsHClrmC1Qc+N2dMY8lm0rkre7Zxfs='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' https:; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-src 'none'" />
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="description" content="浮生角色馆 — 带上你的 API Key，来和有趣的角色彻夜长谈。">
@@ -1813,12 +1813,14 @@ function stopGen(){
   if(state.ctrl){ state.ctrl.abort(); }
 }
 function sendCurrent(){
+  // 生成中按钮即「停止」：必须最先判断。发送后输入框已被清空，
+  // 若先判空 return，点「■」会直接退出、永远走不到 stopGen()，用户得先打字才能停。
+  if(state.generating){ stopGen(); return; }
   const sess = ensureSession();
   if(!sess) return toast("先去侧栏选一个角色吧", "err");
   const ta = $("#msgInput");
   const text = ta.value.trim();
   if(!text) return;
-  if(state.generating){ stopGen(); return; }
   sess.messages.push({ role:"user", content:text, ts: nowTs() });
   ta.value = "";
   autoGrow(ta);
