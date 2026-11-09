@@ -1,59 +1,211 @@
 # 浮生角色馆 · Fusheng Roleplay Lounge
 
-> A single-file, browser-only roleplay chat lounge. Bring your own API key, pick a character, and talk all night — your data stays local.
+> 一个单文件、纯浏览器的角色扮演聊天室。自带 API Key，挑一个角色，聊到天亮——所有数据都留在你自己的浏览器里。
 
-**Live site (GitHub Pages):** https://azdezhishijiangtang.github.io/fusheng-roleplay/
+**在线使用：** https://azdezhishijiangtang.github.io/fusheng-roleplay/
 
 > **© 2026 azdezhishijiangtang · 保留所有权利 / All Rights Reserved**
 > 本仓库全部内容——源代码、角色设定、提示词、界面文案——均为原创作品，受版权保护。未经作者事先书面许可，禁止复制、转载、克隆、镜像、二次分发或用于任何衍生作品（无论商业或非商业用途）。详见 [LICENSE](./LICENSE)。
 > All content in this repository (code, character cards, prompts, and copy) is original work protected by copyright. No copying, redistribution, mirroring, or derivative use without the author's prior written permission. See [LICENSE](./LICENSE).
 
-## What problem this solves
+> **本站没有后端、没有账号、没有统计、不收集任何数据。** 你写的每一句话只保存在本机浏览器；唯一的对外请求，是你自己配置的那个 AI 服务商地址。
 
-Most roleplay / character-chat sites lock you in: they host the model, log your chats, charge a subscription, and give you no control over your data. Fusheng flips that:
+---
 
-- **You bring your own API key** (OpenAI / DeepSeek / Zhipu GLM / Kimi / Qwen / Gemini / any OpenAI-compatible endpoint) — the site is just a front end that talks directly from your browser to the provider you choose.
-- **Your data never leaves your browser.** Characters, sessions, and keys live in `localStorage`. There is no backend, no account, no telemetry.
-- **Private by design.** Nothing you write is ever uploaded to anyone except the model provider you configure.
+## 目录
 
-Think of it as "a local chat UI for your own API key" — lightweight, private, and free of platform lock-in.
+- [它解决什么问题](#它解决什么问题)
+- [主要功能](#主要功能)
+- [五步开始用](#五步开始用)
+- [接入你自己的 AI 模型](#接入你自己的-ai-模型)
+- [密钥保护与「解锁口令」](#密钥保护与解锁口令)
+- [角色卡格式](#角色卡格式)
+- [隐私与数据边界](#隐私与数据边界)
+- [数据与备份](#数据与备份)
+- [浏览器兼容性](#浏览器兼容性)
+- [本地运行与部署](#本地运行与部署)
+- [已知限制与安全边界](#已知限制与安全边界)
+- [相关文档](#相关文档)
 
-## Main features
+---
 
-| Category | Details |
+## 它解决什么问题
+
+大多数角色聊天网站会把你锁在平台里：模型由它托管、聊天记录由它保存、按月收费、数据不由你控制。浮生反过来做：
+
+- **自带 API Key（BYOK）**：OpenAI / DeepSeek / 智谱 GLM / Kimi / 通义千问 / Gemini，或任意 OpenAI 兼容地址都行。本站只是一个前端界面，**浏览器直连**你选的服务商。
+- **数据不出浏览器**：角色、会话、密钥都在本地，没有后端、没有账号、没有遥测。
+- **零平台锁定**：想换服务商就换，聊天记录还在你手里。
+
+可以把它理解成「**给你自己的 API Key 配的一个本地聊天界面**」——轻、私密、不被平台绑定。
+
+---
+
+## 主要功能
+
+| 分类 | 内容 |
 |---|---|
-| API access | 7 presets (OpenAI, DeepSeek, Zhipu GLM, Kimi/Moonshot, Qwen, Gemini, Custom) + any OpenAI-compatible base URL; connection tester built in |
-| Streaming chat | SSE streaming replies with typewriter cursor, stop/resume, retry on error |
-| Message tools | Edit-and-regenerate any user message, rewrite last reply, "continue" button, quick chips (continue / elaborate / rephrase) |
-| Roleplay engine | Built-in shared performance-rules layer, toggleable |
-| Characters | 5 hand-tuned builtin characters; character workshop to create or fork-edit your own cards (emoji + theme color pickers) |
-| Session | Multiple sessions per character, session titles, plot memo injected into every request, clear chat, export to TXT |
-| Data | Full backup/restore via JSON export/import |
-| UI | Dark "midnight lounge" theme + light theme, mobile drawer layout, no external dependencies |
+| **API 接入** | 7 个预设（OpenAI、DeepSeek、智谱 GLM、Kimi/Moonshot、通义千问、Gemini、自定义）+ 任意 OpenAI 兼容地址；内置「测试连接」 |
+| **流式对话** | SSE 流式回复、打字机光标、**随时「停止生成」**、出错可重试 |
+| **消息工具** | 编辑任意一条自己的消息并重新生成、重写上一条回复、「继续」按钮、快捷指令（继续 / 展开 / 换个说法） |
+| **角色引擎** | 内置共享的表演规则层，可开关 |
+| **角色** | 多个手工打磨的内置角色；「角色工坊」可自建或复制改编角色卡（含 emoji 与主题色选择） |
+| **会话** | 每个角色可开多个会话、自定义会话标题、剧情备忘自动注入每次请求、清空聊天、导出 TXT |
+| **数据** | JSON 完整备份 / 恢复（导入导出） |
+| **界面** | 深色「午夜酒廊」主题 + 浅色主题、移动端抽屉布局、无任何外部依赖 |
 
-## Getting started
+---
 
-The project runs as a hosted site — there is nothing to download, install, or deploy.
+## 五步开始用
 
-1. Open the live site: **https://azdezhishijiangtang.github.io/fusheng-roleplay/**
-2. Click **设置 API (Set API)** in the bottom-left corner.
-3. Pick a provider preset, paste your API key, choose a model, hit **测试连接 (Test)**.
-4. Pick a character from the sidebar — or open **角色工坊 (Character Workshop)** to write your own card.
-5. Chat. Use the quick chips above the input box to steer the conversation.
+1. 打开上面的在线地址（**无需下载、安装或部署**）。
+2. 点左下角 **「设置 API」**。
+3. 选一个服务商预设，粘贴 API Key，选模型，点 **「测试连接」** 确认能通。
+4. 从侧栏挑一个角色，或进 **「角色工坊」** 自己写一张角色卡。
+5. 开始聊天。输入框上方的快捷指令可以调整对话走向；生成过程中点 **「■」** 可随时停止。
 
-> Privacy note: your API key is stored only in your browser's `localStorage` and sent only to the provider endpoint you configure. The page makes no other network requests.
+> 不想每次刷新都重贴 Key？见下节「解锁口令」。**不设也完全能用。**
 
-## Character card format
+---
 
-Cards are structured plain text built from four fields:
+## 接入你自己的 AI 模型
 
-| Field | Purpose |
+| 项目 | 说明 |
 |---|---|
-| 角色设定 (persona) | Identity, personality, speech habits, what the character cares about or avoids |
-| 开场白 (greeting) | The opening scene the character enters with |
-| 示例对话 (examples) | Sample exchanges that anchor tone and rhythm |
-| 剧情备忘 (plot memo) | Optional context injected into every request |
+| 协议 | OpenAI 兼容 `/chat/completions`（SSE 流式） |
+| 地址要求 | 必须是 **HTTPS**（或 localhost）。HTTPS 页面请求 HTTP 地址会被浏览器拦截，前端无法绕过 |
+| 预设 | 7 个常见服务商，各自带默认的接口地址；「自定义」可填任意兼容端点 |
+| 模型 | 预设里选择，或手动填写模型名 |
+| 测试连接 | 15 秒超时，显示真实失败原因 |
 
-The full text of the builtin characters — persona, greetings, and example dialogues — is original creative work and is intentionally not reproduced here. Explore them on the live site. Anything you write in the workshop belongs to you and stays in your browser.
+常见失败提示都会按**真实原因**展示（401 密钥无效 / 429 限流 / 5xx 服务错误 / SSE 业务错误 / 畸形流），不会笼统报「请求失败」。
 
-An optional shared performance-rules layer is applied automatically to every conversation — no configuration needed.
+> **CORS 提示**：若服务商不允许浏览器跨域直连，请换用支持直连的服务商或地址；纯前端无法代为解决跨域。
+
+---
+
+## 密钥保护与「解锁口令」
+
+「设置 API」弹窗里的 **「密钥保护」** 面板，是本站保护 API Key 的地方。里面的「口令」常被误解，请先看这三句话：
+
+1. **API Key**（`sk-...`）是服务商给你的，用来让 AI 干活。
+2. **解锁口令**是你自己随便设的（至少 8 位），只是给**浏览器里的临时保险箱**上锁用的本地密码。
+3. **它不是网站密码**——本站没有账号、不用注册登录；**也不是 API Key**。
+
+| 用法 | 效果 | 适合谁 |
+|---|---|---|
+| **不设口令（默认）** | Key 只存在内存里，刷新或关闭标签页立即消失；每次刷新要重新粘贴一次 Key | 最在意安全、公用电脑、临时用一次 |
+| **设口令 + 点「会话内记住」** | 用 `PBKDF2-SHA256(310000 轮)` 派生 + `AES-256-GCM` 把 Key 加密后暂存在**当前标签页**；刷新后输口令「解锁」即可，不用重贴 Key | 自己的电脑，需要反复刷新 |
+
+关键事实：
+
+- 口令**哪里都不存**，网站没有服务器，口令从不进入任何网络请求，也**无法找回**（忘了就点「彻底清除」，重新粘贴 API Key 再设个新口令即可，Key 本身没丢）。
+- 明文 Key **永不写入** `localStorage`、Cookie、导出备份；保存的设置里只有一个不能发请求的句柄。
+- 密文只写 `sessionStorage`，**关闭标签页即由浏览器清除**；最长 8 小时过期。
+- 自动锁定：空闲 **15 分钟**、页面切到后台 **3 分钟**、刷新 / 关闭页面，都会清空内存里的明文。
+- 面板右侧新增 **「?」按钮**，点开就是这套机制的白话说明（含常见问题与安全边界）。
+
+> 📖 **看不懂这个口令到底在干什么？** 请读完整说明书： **[《密钥保护说明.md》](./密钥保护说明.md)**
+> 里面有「三个东西别搞混」对照表、设 / 不设的对比、逐步操作、10 条常见问题（含「忘了怎么办」）、加密参数与如实的安全边界。
+
+---
+
+## 角色卡格式
+
+角色卡是由四个字段拼成的结构化纯文本：
+
+| 字段 | 作用 |
+|---|---|
+| 角色设定（persona） | 身份、性格、说话习惯、在意什么、回避什么 |
+| 开场白（greeting） | 角色登场时的第一个场景 |
+| 示例对话（examples） | 几组示范对话，用来锚定语感与节奏 |
+| 剧情备忘（plot memo） | 可选，自动注入每次请求的背景上下文 |
+
+内置角色的完整设定、开场白与示例对话是原创内容，**故意不在本文档中复刻**，请到站点里体验。你在角色工坊里写的内容属于你自己，且只保存在你的浏览器里。
+
+系统会自动为每段对话套用一层可选的**共享表演规则**，无需额外配置。
+
+---
+
+## 隐私与数据边界
+
+| 数据 | 存在哪里 | 会不会离开你的设备 |
+|---|---|---|
+| 角色、会话、聊天记录、设置 | 当前浏览器 `localStorage` | **不会**，除非你自己导出备份 |
+| API Key 明文 | **只在运行内存里** | 只会发往**你填写的那个服务商地址** |
+| 加密暂存密文（仅设口令时） | 当前标签页 `sessionStorage` | **不会** |
+| 解锁口令 | 不存储 | **不会** |
+| 站点自身 | 无后端、无账号、无埋点、无外部依赖 | —— |
+
+- 页面**不会发起任何其他网络请求**；所有资源（含 `byok-vault.js`）都是本站静态文件。
+- 导入备份属于用户可控数据，导入时对角色名、emoji、主题色等做了转义与白名单校验。
+- 不要在公共电脑上保存密钥；用完点「彻底清除」并关闭标签页。
+
+---
+
+## 数据与备份
+
+- **导出**：设置 → 导出 JSON，得到完整档案（角色、会话、设置）。
+- **导入**：同一页面导入 JSON 恢复；导入前建议先导出一份。
+- **导出 TXT**：单个会话可导出为纯文本，方便留存。
+- 备份**永远不含 API Key 和解锁口令**，换设备后需要重新粘贴 Key。
+
+---
+
+## 浏览器兼容性
+
+- 单文件原生 JS，构建目标兼容较旧浏览器内核。
+- 兼容层：`fetch` 缺失降级 XHR、`AbortController` polyfill、SSE 降级、`TextEncoder/TextDecoder` 兜底、代理对 / 4 字节 UTF-8 编码处理。
+- 隐私模式 / 禁用存储时自动降级到内存，页面仍可用（刷新后数据不保留）。
+- 部署严格 CSP（`script-src` 用 sha256 白名单）、`Referrer-Policy`、`form-action` / `frame-src` 限制。
+
+---
+
+## 本地运行与部署
+
+本项目**没有构建步骤**，就是一组静态文件：
+
+```bash
+# 任意静态服务器即可，例如
+python3 -m http.server 8000
+# 然后打开 http://localhost:8000/
+```
+
+> 注意：站点需要 **HTTPS 或 localhost** 才能使用 Web Crypto（密钥加密依赖它）。
+
+文件说明：
+
+| 文件 | 作用 |
+|---|---|
+| `index.html` | 全部界面、样式与逻辑（单文件） |
+| `byok-vault.js` | 密钥保险库 + 「密钥保护」面板（含「?」说明） |
+| `scripts/verify-csp.mjs` | 校验内联脚本哈希与 CSP 是否匹配 |
+
+**部署**：推送到 `main` 后由 GitHub Actions 发布静态文件到 Pages，无需构建。
+
+> ⚠️ **改了 `index.html` 里的内联脚本后，必须重算 CSP 哈希**，否则浏览器会拒绝执行脚本：
+> ```bash
+> node scripts/verify-csp.mjs
+> ```
+> 脚本会提示应写入的新 `'sha256-...'` 值，把它替换到 `<meta http-equiv="Content-Security-Policy">` 里再复验。
+
+---
+
+## 已知限制与安全边界
+
+- **纯前端 BYOK 的不可能三角**：发请求那一刻浏览器必须短暂持有明文 Key。若页面被注入恶意脚本（XSS），攻击者仍可能在解锁期间读取。本机制把「长期磁盘明文」变成「短暂内存明文」，并配合严格 CSP 降低风险，但**不能宣称绝对不会泄露**。
+- 请务必使用**额度受限、可随时撤销的专用子密钥**，不要用主账号密钥，并定期轮换。
+- 聊天内容由 AI 生成，请自行判断，不要输入敏感个人信息。
+- 清理浏览器数据会一并清掉角色与会话，请定期导出备份。
+
+完整技术说明见 **[《密钥保护说明.md》](./密钥保护说明.md)**。
+
+---
+
+## 相关文档
+
+| 文档 | 内容 |
+|---|---|
+| [《密钥保护说明.md》](./密钥保护说明.md) | 解锁口令机制完整说明书（是什么、怎么用、FAQ、加密参数、安全边界） |
+| [LICENSE](./LICENSE) | 版权与授权声明 |
+| `scripts/verify-csp.mjs` | CSP 内联脚本哈希校验 |

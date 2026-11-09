@@ -366,8 +366,91 @@
       if (css) e.style.cssText = css;
       return e;
     }
-    var title = el('div', 'font-weight:600;margin-bottom:4px;');
+    var titleRow = global.document.createElement('div');
+    titleRow.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px;';
+    var title = global.document.createElement('div');
+    title.style.cssText = 'font-weight:600;';
     title.textContent = '密钥保护';
+
+    /* 「?」帮助按钮：点开 / 收起解锁口令机制的白话说明（原生 DOM，不拼 HTML） */
+    var panelId = 'byok-help-' + Math.random().toString(36).slice(2, 9);
+    var helpBtn = global.document.createElement('button');
+    helpBtn.type = 'button';
+    helpBtn.textContent = '?';
+    helpBtn.title = '这是什么？点开看详细说明';
+    helpBtn.setAttribute('aria-label', '查看密钥保护与解锁口令机制说明');
+    helpBtn.setAttribute('aria-expanded', 'false');
+    helpBtn.setAttribute('aria-controls', panelId);
+    helpBtn.style.cssText = 'flex:0 0 auto;width:20px;height:20px;line-height:18px;padding:0;border-radius:50%;border:1px solid rgba(127,127,127,.55);background:transparent;color:inherit;cursor:pointer;font-size:12px;font-weight:700;';
+
+    var help = global.document.createElement('div');
+    help.id = panelId;
+    help.style.cssText = 'display:none;max-height:320px;overflow:auto;margin:10px 0 2px;padding:12px 14px;border-radius:8px;border:1px solid rgba(127,127,127,.3);background:rgba(127,127,127,.06);line-height:1.75;';
+    helpBtn.addEventListener('click', function () {
+      var open = help.style.display === 'none';
+      help.style.display = open ? '' : 'none';
+      helpBtn.setAttribute('aria-expanded', String(open));
+    });
+
+    var HELP_SECTIONS = [
+      { h: '一句话：这个「口令」到底是什么？', lines: [
+        '它是你给「浏览器里的临时保险箱」设的开箱密码，只用来把 API Key 临时锁在当前标签页里。',
+        '它不是网站密码——本站没有账号、不用注册登录；也不是 API Key——API Key 是服务商给你的 sk-… 那一串。',
+        '不填它，网站照常能用；填它，只是为了刷新页面后不用重新粘贴 API Key。',
+      ] },
+      { h: '设 / 不设，差别在哪？', lines: [
+        '不设（默认，最安全）：Key 只放在内存里，刷新或关掉标签页立刻消失，代价是每次刷新要重贴一次 Key。',
+        '设（点「会话内记住」）：用口令把 Key 加密成 AES-256-GCM 密文，暂存在当前标签页；刷新后输口令解锁，不用重贴 Key。关掉标签页一样全部消失。',
+        '两种方式都不会把明文 Key 写进硬盘，导出备份也永远不含 Key 和口令。',
+        '加密用 PBKDF2-SHA256（31 万轮）派生口令，再以 AES-256-GCM 加密；派生的密钥不可导出，口令和明文 Key 都不落盘。',
+        '拿不准就用默认（不设）——只是多贴一次 Key，换来电脑上不留任何痕迹。',
+      ] },
+      { h: '怎么用？', lines: [
+        '只想临时用一次：什么都不用做，直接在上面填 API Key 开始提问。',
+        '想免重贴：填好 API Key → 在下面输入框填一串至少 8 位的口令 → 点「会话内记住」。',
+        '刷新回来后：输入同一口令 → 点「解锁」，即可继续提问。',
+        '用完想收工：「立即锁定」是临时锁屏（密文还在）；「彻底清除」是内存与密文一起抹掉，不可恢复。',
+        '换了 API Key、或者用完公共电脑，请用「彻底清除」并关掉标签页。',
+      ] },
+      { h: '它会自动锁上吗？会', lines: [
+        '空闲 15 分钟没有任何 AI 请求、切到别的标签页或最小化 3 分钟、刷新或关闭页面，都会自动清空内存里的明文 Key。',
+        '加密暂存最长 8 小时，过期自动作废，不能延长。',
+        '只要重新粘贴 / 修改 API Key，旧的暂存立刻作废，需要重新设一次。',
+      ] },
+      { h: '常见问题', lines: [
+        '口令忘了怎么办？——无法找回，本站不存口令、也没有找回密码。但一点都不严重：点「彻底清除」，重新粘贴 API Key，再设个新口令即可；你的 Key 在服务商控制台还在。',
+        '口令会上传吗？——不会。本站没有服务器，口令只在浏览器本地参与加密计算，从不进入任何网络请求，也不写入 localStorage。',
+        '要设多复杂？——至少 8 位，别用生日、别和常用账号密码相同即可。',
+        '公共电脑怎么办？——不要设口令，用完点「彻底清除」并关闭标签页。',
+        '导出备份会带出密钥吗？——不会，导出文件永远不含 API Key 和口令。',
+      ] },
+      { h: '请如实了解的安全边界', lines: [
+        '纯前端绕不开一个事实：发请求那一刻，浏览器必须短暂拿着明文 Key。若页面被注入恶意脚本（XSS），攻击者在解锁期间仍可能读到它。',
+        '本机制做的是把「长期躺在硬盘上的明文」变成「短暂存在于内存的明文」，并配合站点严格 CSP 尽量堵死注入，但不能宣称绝对不会泄露。',
+        '请务必使用额度受限、可随时撤销的专用子密钥，不要用主账号密钥，并定期轮换。',
+        '要让浏览器永不持有明文，唯一根治方案是服务端代理加 HttpOnly 会话；本站刻意不采用，以保持纯静态、零收集。',
+      ] },
+    ];
+    for (var sec of HELP_SECTIONS) {
+      var hh = global.document.createElement('div');
+      hh.style.cssText = 'font-weight:600;margin:10px 0 4px;';
+      hh.textContent = sec.h;
+      help.appendChild(hh)
+      var ul = global.document.createElement('ul');
+      ul.style.cssText = 'margin:0;padding-left:18px;';
+      for (var line of sec.lines) {
+        var li = global.document.createElement('li');
+        li.style.cssText = 'margin:2px 0;';
+        li.textContent = line;
+        ul.appendChild(li)
+      };
+      help.appendChild(ul)
+    };
+    var helpFoot = global.document.createElement('div');
+    helpFoot.style.cssText = 'opacity:.7;margin-top:8px;';
+    helpFoot.textContent = '完整技术说明见项目文档《密钥保护说明.md》。';
+    help.appendChild(helpFoot)
+    titleRow.appendChild(title); titleRow.appendChild(helpBtn)
     var status = el('div');
     var hint = el('div', 'opacity:.75;margin:6px 0;');
     hint.textContent = '默认零持久化：密钥只存在内存中，刷新或关闭页面即消失，绝不写入 localStorage。仅当你主动设置口令并点「会话内记住」时，才会以 AES-256-GCM 密文暂存于本标签页。';
@@ -399,8 +482,8 @@
     var bPurge = btn('彻底清除', function () { purge(); say('已彻底清除：内存与加密暂存均已销毁。'); if (onChange) onChange(); });
     row.appendChild(input); row.appendChild(bRemember); row.appendChild(bUnlock);
     row.appendChild(bLock); row.appendChild(bPurge);
-    root.appendChild(title); root.appendChild(status); root.appendChild(hint);
-    root.appendChild(row); root.appendChild(msg);
+    root.appendChild(titleRow); root.appendChild(status); root.appendChild(hint);
+    root.appendChild(row); root.appendChild(msg); root.appendChild(help);
     host.replaceChildren(root);
 
     function render(s) {
