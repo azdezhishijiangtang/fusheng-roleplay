@@ -5,7 +5,7 @@
   <!-- ⚠️ 本页内联脚本受下方 CSP 的 sha256 锁定：任何对内联脚本内容的改动都
        必须同步更新哈希，否则浏览器会拒绝执行整段脚本（表现为所有浏览器都打不开）。
        校验命令：node scripts/verify-csp.mjs -->
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval' 'sha256-Wk7FxKgoifLOogmrNsaSktvuhMrUlLJKpE/hXxpt9sI='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' https:; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-src 'none'" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval' 'sha256-vVtcS/jhTyy/5wQre1NT5qVdD2yZ2You0CzBXUFVrCA='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' https:; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-src 'none'" />
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="description" content="浮生角色馆 — 带上你的 API Key，来和有趣的角色彻夜长谈。">
@@ -842,7 +842,9 @@ html[data-theme="light"] #sceneGlow{opacity:.45}
 const $ = s => document.querySelector(s);
 const $$ = s => [...document.querySelectorAll(s)];
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
-const escapeHtml = s => s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+const escapeHtml = s => String(s ?? "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");
+/* 颜色只接受 #rgb / #rrggbb：导入备份里的 color 会拼进 style 属性，必须白名单化 */
+const safeColor = c => /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(String(c ?? "")) ? c : "#e6b566";
 const nowTs = () => Date.now();
 const fmtTime = ts => new Date(ts).toTimeString().slice(0,5);
 const fmtDate = ts => { const d=new Date(ts); return `${d.getMonth()+1}月${d.getDate()}日`; };
@@ -1303,7 +1305,9 @@ function renderRich(raw){
   return out || "<p></p>";
 }
 function avatarStyle(ch, size){
-  return ch ? `background:linear-gradient(135deg,${ch.color}33,${ch.color}18);border:1px solid ${ch.color}55;box-shadow:inset 0 0 14px ${ch.color}22;${size?`width:${size}px;height:${size}px;font-size:${Math.round(size*.53)}px;`:""}` : "";
+  if(!ch) return "";
+  const c = safeColor(ch.color);
+  return `background:linear-gradient(135deg,${c}33,${c}18);border:1px solid ${c}55;box-shadow:inset 0 0 14px ${c}22;${size?`width:${size}px;height:${size}px;font-size:${Math.round(size*.53)}px;`:""}`;
 }
 function msgNode(sess, m, idx){
   const ch = getChar(sess.charId);
@@ -1318,7 +1322,7 @@ function msgNode(sess, m, idx){
   div.dataset.idx = idx;
   const av = m.role === "user"
     ? `<div class="avatar" style="background:linear-gradient(135deg,var(--surface-3),var(--surface-2));border:1px solid var(--border)">🙂</div>`
-    : `<div class="avatar" style="${avatarStyle(ch)}" title="${escapeHtml(ch.name)}">${ch.emoji}</div>`;
+    : `<div class="avatar" style="${avatarStyle(ch)}" title="${escapeHtml(ch.name)}">${escapeHtml(ch.emoji)}</div>`;
   const ops = m.role === "user"
     ? `<button data-op="edit" data-i="${idx}" title="编辑后重新生成">✎ 编辑</button><button data-op="del" data-i="${idx}" title="删除">🗑 删除</button>`
     : `<button data-op="copy" data-i="${idx}" title="复制">⧉ 复制</button><button data-op="regen" data-i="${idx}" title="重新生成这条回复">↺ 重写</button><button data-op="cont" data-i="${idx}" title="让她继续说">▶ 继续</button><button data-op="del" data-i="${idx}" title="删除">🗑</button>`;
@@ -1351,7 +1355,7 @@ function renderChat(){
     for(const ch of state.chars.filter(c => c.builtin && !c.script).slice(0, 6)){
       const b = document.createElement("button");
       b.className = "q-role";
-      b.innerHTML = `<span>${ch.emoji}</span><b>${escapeHtml(ch.name)}</b>`;
+      b.innerHTML = `<span>${escapeHtml(ch.emoji)}</span><b>${escapeHtml(ch.name)}</b>`;
       b.addEventListener("click", () => openChar(ch.id));
       wq.appendChild(b);
     }
@@ -1365,7 +1369,7 @@ function renderChat(){
         const b = document.createElement("button");
         b.className = "q-role";
         b.style.borderColor = "var(--accent-line)";
-        b.innerHTML = `<span>${sc.emoji}</span><b>${escapeHtml(sc.name)}</b><span style="color:var(--text-3);font-size:11px">${escapeHtml(sc.script.genre)} · ${sc.script.stages.length}幕</span>`;
+        b.innerHTML = `<span>${escapeHtml(sc.emoji)}</span><b>${escapeHtml(sc.name)}</b><span style="color:var(--text-3);font-size:11px">${escapeHtml(sc.script.genre)} · ${sc.script.stages.length}幕</span>`;
         b.addEventListener("click", () => openChar(sc.id));
         wq2.appendChild(b);
       }
@@ -1377,7 +1381,7 @@ function renderChat(){
   $("#hAvatar").style.cssText = avatarStyle(ch, 38);
   $("#hAvatar").textContent = ch.emoji;
   $("#hName").textContent = ch.name;
-  $("#hName").style.color = ch.color;
+  $("#hName").style.color = safeColor(ch.color);
   $("#hStatusText").textContent = state.generating ? "正在回应……" : `在线 · ${ch.tagline}`;
   $("#charHint").textContent = `${ch.name} · ${DEPTH_PRESETS[state.api.depth]?.label ?? "沉浸"} · 温度 ${state.api.temp} · 守则${state.api.rulesOn ? "开" : "关"}`;
   // 恢复这场对话的画面与剧本进度
@@ -1410,9 +1414,9 @@ function renderCharList(){
     const b = document.createElement("button");
     b.className = "side-item" + (state.activeCharId === ch.id ? " on" : "");
     b.innerHTML = `
-      <div class="avatar" style="${avatarStyle(ch)}">${ch.emoji}</div>
+      <div class="avatar" style="${avatarStyle(ch)}">${escapeHtml(ch.emoji)}</div>
       <div class="s-meta"><div class="s-name">${escapeHtml(ch.name)}${ch.script ? ' <span style="font-size:10px;color:var(--accent);border:1px solid var(--accent-line);border-radius:999px;padding:0 5px;vertical-align:1px">剧本</span>' : ""}</div><div class="s-sub">${escapeHtml(ch.tagline)}</div></div>
-      ${ch.builtin ? "" : `<span class="s-del" data-delchar="${ch.id}" title="删除角色">✕</span>`}`;
+      ${ch.builtin ? "" : `<span class="s-del" data-delchar="${escapeHtml(ch.id)}" title="删除角色">✕</span>`}`;
     b.addEventListener("click", e => {
       if(e.target.dataset.delchar) return;
       openChar(ch.id);
@@ -1461,10 +1465,10 @@ function renderSessionList(){
     const b = document.createElement("button");
     b.className = "side-item" + (state.activeSessionId === s.id ? " on" : "");
     b.innerHTML = `
-      <div class="avatar" style="${avatarStyle(ch)}">${ch.emoji}</div>
+      <div class="avatar" style="${avatarStyle(ch)}">${escapeHtml(ch.emoji)}</div>
       <div class="s-meta"><div class="s-name">${escapeHtml(s.title)}</div><div class="s-sub">${escapeHtml(ch.name)} · ${s.messages.length} 条</div></div>
       <span class="s-time">${fmtAgo(s.updatedAt)}</span>
-      <span class="s-del" data-delsess="${s.id}" title="删除">✕</span>`;
+      <span class="s-del" data-delsess="${escapeHtml(s.id)}" title="删除">✕</span>`;
     b.addEventListener("click", e => {
       if(e.target.dataset.delsess) return;
       state.activeSessionId = s.id;
@@ -1546,10 +1550,10 @@ function applyScene(str, force){
   const parts = key.split(/[·,，、;；/|]+/).map(s => s.trim()).filter(Boolean).slice(0, 6);
   const bar = $("#sceneBar");
   if (parts.length){
-    bar.innerHTML = `<span class="scene-icon">${p.icon}</span><span class="scene-text">${escapeHtml(parts.join(" · "))}</span><span class="scene-dot"></span>`;
+    bar.innerHTML = `<span class="scene-icon">${escapeHtml(p.icon)}</span><span class="scene-text">${escapeHtml(parts.join(" · "))}</span><span class="scene-dot"></span>`;
     bar.classList.add("show");
   } else {
-    bar.innerHTML = `<span class="scene-icon">${p.icon}</span><span class="scene-text">馆内灯暖 · 夜色正浓</span><span class="scene-dot"></span>`;
+    bar.innerHTML = `<span class="scene-icon">${escapeHtml(p.icon)}</span><span class="scene-text">馆内灯暖 · 夜色正浓</span><span class="scene-dot"></span>`;
     bar.classList.remove("show");
   }
 }
@@ -2220,8 +2224,8 @@ function openInfoModal(){
   const fmt = s => escapeHtml(s).replace(/\n/g, "<br>");
   $("#infoBody").innerHTML = `
     <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
-      <div class="avatar" style="${avatarStyle(ch, 46)};font-size:24px">${ch.emoji}</div>
-      <div><div style="font-size:17px;font-weight:700;color:${ch.color}">${escapeHtml(ch.name)}</div>
+      <div class="avatar" style="${avatarStyle(ch, 46)};font-size:24px">${escapeHtml(ch.emoji)}</div>
+      <div><div style="font-size:17px;font-weight:700;color:${safeColor(ch.color)}">${escapeHtml(ch.name)}</div>
       <div style="font-size:12.5px;color:var(--text-3)">${escapeHtml(ch.tagline)} · ${ch.builtin ? "馆内常驻" : "你捏的角色"}</div></div>
       <span style="flex:1"></span>
       <button class="btn ghost" id="infoEditBtn">编辑此卡</button>
