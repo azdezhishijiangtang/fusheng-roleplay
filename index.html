@@ -5,7 +5,7 @@
   <!-- ⚠️ 本页内联脚本受下方 CSP 的 sha256 锁定：任何对内联脚本内容的改动都
        必须同步更新哈希，否则浏览器会拒绝执行整段脚本（表现为所有浏览器都打不开）。
        校验命令：node scripts/verify-csp.mjs -->
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval' 'sha256-QodP1LyQDv7aPAsHClrmC1Qc+N2dMY8lm0rkre7Zxfs='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' https:; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-src 'none'" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval' 'sha256-wL8muiqknnn0PfLY6b/qVx3fCQsDyI9/iQ3kVfd0JUs='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' https:; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-src 'none'" />
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="description" content="浮生角色馆 — 带上你的 API Key，来和有趣的角色彻夜长谈。">
@@ -622,6 +622,12 @@ html[data-theme="light"] #sceneGlow{opacity:.45}
       <input type="text" id="apiBase" placeholder="https://api.example.com/v1" spellcheck="false">
     </div>
     <div class="field">
+      <label>CORS 中转（可选）<span class="opt">只填你自己部署的中转地址 · 留空则直连</span></label>
+      <input type="text" id="apiProxy" placeholder="https://your-name.workers.dev" spellcheck="false">
+      <p class="opt" style="margin:6px 0 0;line-height:1.6">智谱 GLM / OpenAI / Gemini 不允许浏览器直连或国内网络不可达，填中转后即可使用；部署脚本见仓库 <code>proxy/worker.js</code>。DeepSeek / Kimi / 通义千问可直连，无需填写。</p>
+      <p id="proxyHint" class="opt" style="display:none;margin:6px 0 0;color:var(--danger);line-height:1.6">⚠ 该服务商需要中转：不填会一直提示「网络错误 / 连接超时」。</p>
+    </div>
+    <div class="field">
       <label>API Key <span class="opt">默认仅存内存 · 刷新即消失 · 不落盘</span></label>
       <input type="password" id="apiKey" placeholder="sk-…" spellcheck="false" autocomplete="off">
     </div>
@@ -653,7 +659,8 @@ html[data-theme="light"] #sceneGlow{opacity:.45}
     <div class="note-box">
       <b>· 隐私</b>：Key 只写入本地浏览器，请求直连你填的服务商，本站不经手任何数据。<br>
       <b>· 兼容</b>：任何兼容 OpenAI <code>/v1/chat/completions</code> 的服务都能接，填好地址和模型即可。<br>
-      <b>· CORS</b>：若浏览器拦截跨域，请使用服务商官方直连地址或本地中转（如 new-api / one-api）。
+      <b>· CORS</b>：浏览器直连被拦时，在上方填「CORS 中转」（推荐自建 <code>proxy/worker.js</code>），或换用支持直连的 DeepSeek / Kimi / 通义千问。中转是你自己的服务，Key 与聊天内容仍不经本站。<br>
+      <b>· 已知限制</b>：智谱 GLM 的跨域预检不返回 CORS 头，OpenAI / Gemini 在国内常不可达，这两类预设<strong>必须配合中转</strong>；纯前端无法绕过。
     </div>
   </div>
   <div class="modal-foot">
@@ -862,12 +869,12 @@ const store = {
 
 /* ---------- API 预设 ---------- */
 const PRESETS = {
-  openai:  { name:"OpenAI",  base:"https://api.openai.com/v1",                              models:["gpt-4o","gpt-4o-mini","gpt-4.1","gpt-4.1-mini"] },
+  openai:  { name:"OpenAI",  base:"https://api.openai.com/v1",                              models:["gpt-4o","gpt-4o-mini","gpt-4.1","gpt-4.1-mini"], needProxy:true },
   deepseek:{ name:"DeepSeek",base:"https://api.deepseek.com/v1",                            models:["deepseek-chat","deepseek-reasoner"] },
-  zhipu:   { name:"智谱GLM", base:"https://open.bigmodel.cn/api/paas/v4",                   models:["glm-4.6","glm-4.5","glm-4.5-air","glm-4-flash"] },
+  zhipu:   { name:"智谱GLM", base:"https://open.bigmodel.cn/api/paas/v4",                   models:["glm-4.6","glm-4.5","glm-4.5-air","glm-4-flash"], needProxy:true },
   kimi:    { name:"Kimi",    base:"https://api.moonshot.cn/v1",                             models:["moonshot-v1-32k","kimi-k2-turbo-preview","kimi-latest"] },
   qwen:    { name:"通义千问", base:"https://dashscope.aliyuncs.com/compatible-mode/v1",      models:["qwen-max","qwen-plus","qwen-turbo"] },
-  gemini:  { name:"Gemini",  base:"https://generativelanguage.googleapis.com/v1beta/openai",models:["gemini-2.5-flash","gemini-2.5-pro","gemini-2.0-flash"] },
+  gemini:  { name:"Gemini",  base:"https://generativelanguage.googleapis.com/v1beta/openai",models:["gemini-2.5-flash","gemini-2.5-pro","gemini-2.0-flash"], needProxy:true },
   custom:  { name:"自定义",   base:"", models:[] }
 };
 
@@ -1149,7 +1156,7 @@ const SCRIPT_DM_RULES = `【剧本主持人守则】
 let state = {
   chars: [],            // 全部角色（内置+自定义）
   sessions: [],         // 全部会话
-  api: { preset:"deepseek", base:"", key:"", model:"", temp:0.9, max:1024, rulesOn:true, depth:"deep" },
+  api: { preset:"deepseek", base:"", key:"", model:"", proxy:"", temp:0.9, max:1024, rulesOn:true, depth:"deep" },
   activeCharId: null,
   activeSessionId: null,
   generating: false,
@@ -1158,7 +1165,7 @@ let state = {
   editCharId: null      // 正在编辑的角色
 };
 function defaultProfiles(){
-  const mk = (name) => ({ name, preset:"deepseek", base:"", key:"", model:"", temp:0.9, max:1024, rulesOn:true, depth:"deep" });
+  const mk = (name) => ({ name, preset:"deepseek", base:"", key:"", model:"", proxy:"", temp:0.9, max:1024, rulesOn:true, depth:"deep" });
   return [mk("存档一"), mk("存档二"), mk("存档三")];
 }
 function loadState(){
@@ -1603,6 +1610,14 @@ function apiBase(){
   if(p === "custom") return (state.api.base || "").replace(/\/+$/, "");
   return PRESETS[p].base;
 }
+/** 生成最终请求地址：填了「CORS 中转」就经中转转发，否则直连服务商 */
+function requestUrl(suffix, baseOverride, proxyOverride){
+  const raw = (baseOverride !== undefined ? baseOverride : apiBase()).replace(/\/chat\/completions$/, "").replace(/\/+$/, "");
+  const direct = raw + suffix;
+  const proxy = String(proxyOverride !== undefined ? proxyOverride : (state.api.proxy || "")).trim().replace(/\/+$/, "");
+  if(!proxy) return direct;
+  return proxy + (proxy.indexOf("?") >= 0 ? "&" : "?") + "target=" + encodeURIComponent(direct);
+}
 function validateApi(){
   if(!state.api.key) return "还没填 API Key——点左下角「接入设置」配置";
   if(state.api.preset === "custom" && !state.api.base) return "自定义接入需要填写接口地址";
@@ -1610,8 +1625,7 @@ function validateApi(){
   return null;
 }
 async function streamChat(messages, onDelta){
-  const base = apiBase();
-  const url = base.replace(/\/chat\/completions$/, "") + "/chat/completions";
+  const url = requestUrl("/chat/completions");
   const body = {
     model: state.api.model,
     messages,
@@ -1691,7 +1705,10 @@ async function streamChat(messages, onDelta){
     return full;
   }catch(e){
     // 超时触发的是 AbortError，转换成明确提示，避免被上层误判为「用户主动停止」
-    if(timedOut) throw new Error("连接超时（45 秒未收到新数据）：接口无响应或网络过慢，请检查接口地址与网络。");
+    if(timedOut) throw new Error("连接超时（45 秒未收到新数据）：接口无响应或网络过慢，请检查接口地址、网络或所填的 CORS 中转。");
+    // CORS 预检失败 / DNS 不通时浏览器只抛 TypeError，拿不到真实状态码，这里单独归类
+    if(/Failed to fetch|NetworkError|Load failed|Network request failed/i.test(String(e && e.message)))
+      throw new Error("请求被浏览器拦截：跨域(CORS)或网络不通。该服务商不支持浏览器直连时，请在「接入设置 → CORS 中转」填入你自己的中转地址（见 proxy/worker.js），或换用 DeepSeek / Kimi / 通义千问。");
     throw e;
   }finally{
     if(idleTimer) clearTimeout(idleTimer);
@@ -1916,7 +1933,8 @@ function renderPresetGrid(){
     const b = document.createElement("button");
     b.type = "button";
     b.className = "preset-btn" + (state.api.preset === k ? " on" : "");
-    b.textContent = v.name;
+    b.textContent = v.name + (v.needProxy ? " ⚠" : "");
+    b.title = v.needProxy ? "该服务商不允许浏览器直连或国内网络不可达，需填写 CORS 中转" : "该服务商支持浏览器直连";
     b.addEventListener("click", () => {
       state.api.preset = k;
       if(k !== "custom") state.api.base = PRESETS[k].base; // 预设地址即时同步，防止残留
@@ -1963,9 +1981,18 @@ function syncPresetUI(){
   }
   modelDatalist.innerHTML = (preset.models || []).map(m => `<option value="${escapeHtml(m)}">`).join("");
   modelInput.value = state.api.model || "";
+  updateProxyHint();
+}
+/** 需要中转却没填时给出醒目提示，避免用户反复撞「网络错误」 */
+function updateProxyHint(){
+  const hint = $("#proxyHint"), input = $("#apiProxy");
+  if(!hint || !input) return;
+  const p = PRESETS[state.api.preset];
+  hint.style.display = (p && p.needProxy && !input.value.trim()) ? "" : "none";
 }
 /** 表单完整重绘：所有字段都从 state.api 取值（打开弹窗/切换存档共用） */
 function fillApiForm(){
+  $("#apiProxy").value = state.api.proxy || "";
   syncPresetUI();
   $("#apiKey").value = ByokVault.isHandle(state.api.key) ? "" : (state.api.key || "");
   $("#apiTemp").value = state.api.temp;
@@ -1986,6 +2013,7 @@ function collectApiForm(){
     state.api.key = typedKey;
   }
   state.api.model = $("#apiModel").value.trim();
+  state.api.proxy = $("#apiProxy").value.trim();
   state.api.temp = $("#apiTemp").value;
   state.api.max = +$("#apiMax").value || 1024;
   state.api.rulesOn = $("#rulesChk").checked;
@@ -2037,12 +2065,12 @@ async function testConnection(){
   btn.disabled = true; btn.textContent = "测试中…";
   const probeCtrl = new AbortController();
   let probeTimedOut = false;
-  const probeTimer = setTimeout(() => { probeTimedOut = true; probeCtrl.abort(); }, 15000);
+  const probeTimer = setTimeout(() => { probeTimedOut = true; probeCtrl.abort(); }, 30000);
   try{
     const probeAuth = ByokVault.isHandle(probe.key)
       ? ByokVault.authHeaders(probe.key).Authorization
       : "Bearer " + probe.key;
-    const res = await ByokVault.secureFetch(probe.base.replace(/\/+$/,"") + "/chat/completions", {
+    const res = await ByokVault.secureFetch(requestUrl("/chat/completions", probe.base, $("#apiProxy").value.trim()), {
       method:"POST",
       headers:{ "Content-Type":"application/json", "Authorization": probeAuth },
       body: JSON.stringify({ model: probe.model, messages:[{role:"user",content:"回复「通」一个字即可"}], max_tokens: 8 }),
@@ -2055,12 +2083,14 @@ async function testConnection(){
       toast("连接失败：" + msg, "err");
     }
   }catch(e){
-    if(probeTimedOut) toast("连接超时（15 秒）：接口无响应或网络过慢，请检查接口地址与网络。", "err");
-    else toast("网络错误：" + e.message + "（仅当控制台确有 CORS 报错时才需更换跨域地址或本地中转）", "err");
+    if(probeTimedOut) toast("连接超时（30 秒）：接口无响应或网络过慢；国际接口建议填写 CORS 中转。", "err");
+    else if(/Failed to fetch|NetworkError|Load failed|Network request failed/i.test(String(e && e.message)))
+      toast("请求被浏览器拦截：跨域(CORS)或网络不通。请在「CORS 中转」填入你自己的中转地址（见 proxy/worker.js），或换用 DeepSeek / Kimi / 通义千问。", "err");
+    else toast("连接失败：" + (e.message || e), "err");
   }finally{
     clearTimeout(probeTimer);
+    btn.disabled = false; btn.textContent = "测试连接";
   }
-  btn.disabled = false; btn.textContent = "测试连接";
 }
 function updateApiStatus(){
   const ok = state.api.key && state.api.model && (state.api.preset !== "custom" || state.api.base);
@@ -2388,6 +2418,8 @@ $("#modalAbout").addEventListener("click", e => {
   $("#apiTemp").addEventListener("input", e => $("#tempVal").textContent = Number(e.target.value).toFixed(2));
   $("#saveApiBtn").addEventListener("click", saveApiModal);
   $("#testBtn").addEventListener("click", testConnection);
+  const px = $("#apiProxy");
+  if(px) px.addEventListener("input", updateProxyHint);
   // 角色工坊
   $("#saveCharBtn").addEventListener("click", saveCharEditor);
   $("#forgeBtn").addEventListener("click", forgeCharacter);
